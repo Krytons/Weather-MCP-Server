@@ -1,10 +1,10 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WeatherTools } from './tools/WeatherTools';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 //STEP 0 - Load environment variables
 import dotenv from 'dotenv';
+import { ExpressServer } from "./server";
 dotenv.config();
 
 
@@ -35,5 +35,6 @@ if(process.env.MODE === 'stdio') {
     server.connect(transport);
 }
 else {
-    const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+    let expressServer = new ExpressServer(process.env.PORT ? parseInt(process.env.PORT as string, 10) : 3000, server);
+    expressServer.start();
 }
