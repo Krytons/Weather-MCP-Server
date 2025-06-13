@@ -1,0 +1,26 @@
+{
+  "name": "weather-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for Open Weather Service interaction",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "MCP",
+    "Weather"
+  ],
+  "author": "Bartolomeo Caruso | Arturo Marzo",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.1",
+    "dotenv": "^16.5.0",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.63"
+  }
+}
