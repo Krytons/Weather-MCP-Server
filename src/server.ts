@@ -1,13 +1,16 @@
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
-import { VersionedRouter } from './routes/VersionedRouter';
+import { RouterFactory } from './routes/RouterFactory';
+import { RouterInterface } from './interfaces/Routers';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export class ExpressServer{
     private app: express.Application;
     private port: number;
     private server: http.Server;
-    private versionedRouter: VersionedRouter;
+    private mcpServer : McpServer;
+    private versionedRouter: RouterInterface;
 
 
     /**
@@ -15,11 +18,14 @@ export class ExpressServer{
      * If no port is provided, it defaults to the value of the PORT environment variable or 3000.
      * @param port - The port number on which the server will listen.
      */
-    constructor(port : number) {
+    constructor(port : number, mcpServer : McpServer) {
+        this.mcpServer = mcpServer;
         this.port = port || (process.env.PORT ? parseInt(process.env.PORT as string, 10) : 3000);
         this.app = express();
         this.server = http.createServer(this.app);
-        this.versionedRouter = new VersionedRouter(process.env.VERSION || 'v1');
+
+        const routerFactory = new RouterFactory(process.env.VERSION || 'v1');
+        this.versionedRouter = routerFactory.getVersionedRouter(this.mcpServer);
     }
 
 
@@ -43,7 +49,7 @@ export class ExpressServer{
      * It also sets the server to listen on the specified port and handles errors and listening events.
      * @throws Will throw an error if the server encounters an issue while starting or listening.
      */
-    start(): void {
+    public start(): void {
         //STEP 1 - Setup express application
         this.app.set('port', this.port);
         this.app.use(express.json());
@@ -59,6 +65,7 @@ export class ExpressServer{
         //STEP 3 - Attach routes
         this.versionedRouter.defineRoutes().then(() => {
             console.log(`Routes defined for version: ${this.versionedRouter.getVersion()}`);
+            this.app.use(this.versionedRouter.getRouter());
         }).catch((error) => {
             console.error(`Error defining routes for version ${this.versionedRouter.getVersion()}:`, error);
         });
@@ -69,7 +76,7 @@ export class ExpressServer{
      * Handles errors that occur during the server's operation.
      * @param error - The error object that contains information about the error that occurred.
      */
-    onError(error : NodeJS.ErrnoException): void {
+    private onError(error : NodeJS.ErrnoException): void {
         if (error.syscall !== 'listen') {
             throw error;
         }
@@ -93,7 +100,7 @@ export class ExpressServer{
     /**
      * Logs a message when the server starts listening.
      */
-    onListening(): void {
+    private onListening(): void {
         const addr = this.server.address();
         const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr?.port;
         console.log('Listening on ' + bind);
