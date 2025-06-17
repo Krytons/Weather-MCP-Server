@@ -46,6 +46,14 @@ export class V1Router extends BaseRouter {
                         this.transports[sessionId] = currentTransport;
                     }
                 }); 
+
+                 //STEP 1.A -- Define closing routine
+                currentTransport.onclose = () => {
+                    delete this.transports[currentTransport.sessionId as string];
+                };
+
+                //STEP 1.B -- Connect the transport to the server
+                await this.server.connect(currentTransport);
             }
             else {
                 res.status(400).json({
@@ -55,18 +63,14 @@ export class V1Router extends BaseRouter {
                         message: 'Invalid request',
                         data: 'Session ID is required for MCP requests.'
                     },
-                    id: req.body.id || null
+                    id: req?.body?.id || null
                 });
                 return next();
             }
 
-            //STEP 2 -- Define closing routine
-            currentTransport.onclose = () => {
-                delete this.transports[currentTransport.sessionId as string];
-            };
-
-            //STEP 3 -- Connect the transport to the server
-            this.server.connect(currentTransport);
+            //STEP 2 -- Handle request using the current transport
+            await currentTransport.handleRequest(req, res, req.body);
+            return next();
         });
 
         
