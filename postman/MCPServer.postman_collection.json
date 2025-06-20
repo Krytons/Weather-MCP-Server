@@ -1,0 +1,309 @@
+{
+	"info": {
+		"_postman_id": "2acd6e82-0c96-487a-9734-3f2654aacb0a",
+		"name": "MCP Server",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9247733"
+	},
+	"item": [
+		{
+			"name": "Tools",
+			"item": [
+				{
+					"name": "Tool list",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"accept": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "text/event-stream",
+								"type": "text"
+							},
+							{
+								"key": "mcp-session-id",
+								"value": "{{mcpSessionId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": 1,\r\n  \"method\": \"tools/list\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/mcp",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"mcp"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get city weather",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"accept": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "text/event-stream",
+								"type": "text"
+							},
+							{
+								"key": "mcp-session-id",
+								"value": "{{mcpSessionId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": \"1\",\r\n  \"method\": \"getCurrentWeather\",\r\n  \"params\": {\r\n    \"city\" : \"Catania\"\r\n  }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/mcp",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"mcp"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Initialization",
+			"item": [
+				{
+					"name": "Initialize Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var mcpHeader = pm.response.headers.find(function(header){\r",
+									"    console.log(header.key);\r",
+									"    return header.key.indexOf('mcp-session-id') !== -1;\r",
+									"});\r",
+									"console.log(pm.response.headers);\r",
+									"if(mcpHeader){\r",
+									"    console.log('Received valid MCP session ID: ' + mcpHeader.value);\r",
+									"    pm.collectionVariables.set(\"mcpSessionId\", mcpHeader.value);\r",
+									"}\r",
+									"else\r",
+									"    console.error('Missing MCP session ID');\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "text/event-stream",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": 1,\r\n  \"method\": \"initialize\",\r\n  \"params\": {\r\n    \"protocolVersion\": \"2025-03-26\",\r\n    \"capabilities\": {\r\n      \"roots\": {\r\n        \"listChanged\": true\r\n      },\r\n      \"sampling\": {}\r\n    },\r\n    \"clientInfo\": {\r\n      \"name\": \"PostmanExampleClient\",\r\n      \"version\": \"1.0.0\"\r\n    }\r\n  }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/mcp",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"mcp"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initialized Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"accept": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "text/event-stream",
+								"type": "text"
+							},
+							{
+								"key": "mcp-session-id",
+								"value": "{{mcpSessionId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"method\": \"notifications/initialized\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/mcp",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"mcp"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "HealthCheck",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:3000/v1",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"v1"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "mcpSessionId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
