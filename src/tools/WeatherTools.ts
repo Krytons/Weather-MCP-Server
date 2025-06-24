@@ -2,8 +2,9 @@ import { WeatherService } from "../services/WeatherService";
 import { CurrentWeatherToolParameters } from "../types/CurrentWeather";
 import { CurrentWeatherToolSchema } from "../schemas/WeatherSchemas";
 import { TextContent } from "../types/Content";
+import { ToolDefinition, ToolInterface } from "../interfaces/Tools";
 
-export class WeatherTools {
+export class WeatherTools implements ToolInterface {
     WeatherService: WeatherService;
 
     constructor() {
@@ -44,7 +45,7 @@ export class WeatherTools {
      * This method returns the tools available in the WeatherTools class.
      * @returns An array of tool objects, each containing the tool name, description, schema, and handler.
      */
-    getTools() {
+    getTools() : ToolDefinition[] {
         return [
             {
                 toolName: "getCurrentWeather",
