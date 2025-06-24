@@ -294,8 +294,8 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Bartolomeo Caruso** - Initial work and architecture
-- **Arturo Marzo** - Development and implementation
+- **[Bartolomeo Caruso](https://github.com/Krytons)** - Tech Leader, Architecture and Implementation
+- **[Arturo Marzo](https://github.com/IlLicenziato)** - Software Engineer and Revisor
 
 ## 🙏 Acknowledgments
 
