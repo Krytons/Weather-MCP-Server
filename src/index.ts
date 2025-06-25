@@ -5,7 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 //STEP 0 - Load environment variables
 import dotenv from 'dotenv';
-import { ExpressServer } from "./server";
+import { ExpressServer } from "./config/ExpressServer";
 dotenv.config();
 
 

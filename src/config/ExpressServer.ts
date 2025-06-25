@@ -1,8 +1,8 @@
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
-import { RouterFactory } from './routes/RouterFactory';
-import { RouterInterface } from './interfaces/Routers';
+import { RouterFactory } from '../routes/RouterFactory';
+import { RouterInterface } from '../interfaces/Routers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export class ExpressServer{
