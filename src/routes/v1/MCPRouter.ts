@@ -1,13 +1,20 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { BaseRouter } from "../BaseRouter";
+import { BaseMCPRouter } from "../BaseMCPRouter";
 import { Router, Request, Response, NextFunction } from 'express';
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { randomUUID } from "crypto";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { APIRouterInterface } from "../../interfaces/Routers";
+import { AuthRouter } from "./AuthRouter";
 
-export class V1Router extends BaseRouter {
+export class V1Router extends BaseMCPRouter {
+    private apiRouters : APIRouterInterface[];
+
     constructor(router: Router, version: string, server: McpServer) {
         super(router, version, server);
+
+        this.apiRouters = [];
+        this.apiRouters.push(new AuthRouter())
     }
 
     public async defineRoutes(): Promise<void> {
@@ -132,10 +139,15 @@ export class V1Router extends BaseRouter {
             });
             return next();
         });
-    }
 
-    public async defineSpecificRoutes(): Promise<void> {
-        
+
+        /**
+         * Add secondary support routes
+         */
+        for (const apiRouter of this.apiRouters){
+            await apiRouter.defineRoutes();
+            this.router.use(apiRouter.basePath, apiRouter.getRouter());
+        }
     }
 }
     

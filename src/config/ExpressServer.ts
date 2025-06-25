@@ -2,7 +2,7 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import { RouterFactory } from '../routes/RouterFactory';
-import { RouterInterface } from '../interfaces/Routers';
+import { MCPRouterInterface } from '../interfaces/Routers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export class ExpressServer{
@@ -10,7 +10,7 @@ export class ExpressServer{
     private port: number;
     private server: http.Server;
     private mcpServer : McpServer;
-    private versionedRouter: RouterInterface;
+    private versionedRouter: MCPRouterInterface;
 
 
     /**
