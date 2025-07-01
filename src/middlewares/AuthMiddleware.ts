@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { AuthTokenPayload } from '../interfaces/Auth';
 
+import Debug from "debug";
+const infoLogger = Debug("AuthMiddlewares:log");
+const errorLogger = Debug("AuthMiddlewares:error");
+
 /**
  * Singleton AuthMiddleware class for handling authentication in Express.js applications.
  */
@@ -32,6 +36,7 @@ export class AuthMiddleware {
      * @returns 
      */
     public authenticate(req: Request, res: Response, next: NextFunction) : void{
+        infoLogger(`ℹ️ Received request for authentication`);
         try{
             //STEP 1 -- Verify authorization headers
             let authHeader = req.headers.authorization;
@@ -71,7 +76,7 @@ export class AuthMiddleware {
             return next();
         }
         catch(error){
-            console.error('[AUTH-MIDDLEWARE] An unhandled error occurred: ', error);
+            errorLogger('❌ An unhandled error occurred: ', error);
             res.status(500).json({
                 success: false,
                 message: 'Authentication error'

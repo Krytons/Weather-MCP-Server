@@ -7,6 +7,10 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { APIRouterInterface } from "../../interfaces/Routers";
 import { UsersRouter } from "./UsersRouter";
 
+import Debug from "debug";
+const infoLogger = Debug("MCPRouter:log");
+const errorLogger = Debug("MCPRouter:error");
+
 export class MCPRouter extends BaseMCPRouter {
     private apiRouters : APIRouterInterface[];
 
@@ -26,6 +30,7 @@ export class MCPRouter extends BaseMCPRouter {
          * This route responds with a welcome message and the API version.
          */
         this.router.get('/v1', (req : Request, res : Response) => {
+            infoLogger(`Received request for v1 health check`);
             res.status(200).json({
                 message: `Welcome to the API! You are using version v1`
             });
@@ -42,6 +47,7 @@ export class MCPRouter extends BaseMCPRouter {
          */
         this.router.post('/mcp', async (req: Request, res: Response, next : NextFunction) => {
             //STEP 1 -- Get session from header and define transport
+            infoLogger(`ℹ️ Received MCP request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
             let currentTransport: StreamableHTTPServerTransport;
             if(mcpSession && this.transports[mcpSession])
@@ -90,6 +96,7 @@ export class MCPRouter extends BaseMCPRouter {
          */
         this.router.get('/mcp', async (req: Request, res: Response,  next : NextFunction) => {
             //STEP 1 -- Get session from header and check if it exists
+            infoLogger(`ℹ️ Received MCP request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
             if (!mcpSession || !this.transports[mcpSession]) {
                 res.status(400).json({
@@ -118,6 +125,7 @@ export class MCPRouter extends BaseMCPRouter {
          */
         this.router.delete('/mcp', async (req: Request, res: Response, next : NextFunction) => {
             //STEP 1 -- Get session from header and check if it exists
+            infoLogger(`ℹ️ Received MCP delete request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
             if (!mcpSession || !this.transports[mcpSession]) {
                 res.status(400).json({

@@ -3,6 +3,10 @@ import { DatabaseInterface } from "../interfaces/Database";
 import { SeederOptions } from "../types/Seeders";
 import { UsersSeeder } from "../seeders/UsersSeeder";
 
+import Debug from "debug";
+const infoLogger = Debug("MongoDatabase:log");
+const errorLogger = Debug("MongoDatabase:error");
+
 const CONNECTION_EVENTS = {
     ERROR : 'error',
     DISCONNECTION : 'disconnected'
@@ -32,27 +36,28 @@ export class MongoDatabase implements DatabaseInterface {
             //STEP 2 -- Connect to local DB using mongoose
             let mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
             await mongoose.connect(mongoURI, {
+                dbName: process.env.MONGODB_DBNAME || 'weather-mcp-server',
                 maxPoolSize: process.env.MONGODB_POOLSIZE ? Number(process.env.MONGODB_POOLSIZE) : 10,
                 serverSelectionTimeoutMS: 10000,
                 socketTimeoutMS: 100000
             })
             this.isConnected = true;
-            console.log('✅ MongoDB connected successfully');
+            infoLogger('✅ MongoDB connected successfully');
 
             //STEP 3 -- Define basic connection events
             mongoose.connection.on(CONNECTION_EVENTS.ERROR, (error) => {
-                console.error('❌ MongoDB connection error:', error);
+                errorLogger('❌ MongoDB connection error:', error);
                 this.isConnected = false;
             })
             mongoose.connection.on(CONNECTION_EVENTS.DISCONNECTION, () => {
-                console.error('⚠️ MongoDB has disconnected:');
+                errorLogger('⚠️ MongoDB has disconnected:');
                 this.isConnected = false;
             })
 
             return true;
         }
         catch (error){
-            console.error('❌ MongoDB connection failed:', error);
+            errorLogger('❌ MongoDB connection failed:', error);
             return false;
         }
     }
@@ -65,14 +70,14 @@ export class MongoDatabase implements DatabaseInterface {
         //STEP 2 -- Execute disconnection
         await mongoose.disconnect();
         this.isConnected = false;
-        console.log('✅ MongoDB disconnected successfully');
+        infoLogger('✅ MongoDB disconnected successfully');
         return true;
     }
 
     public async executeSeeding(options : SeederOptions): Promise<boolean>{
         //STEP 1 -- Check if database is connected
         if(!this.isDatabaseConnected()){
-            console.error('❌ Cannot execute seeding, MongoDB is not connected');
+            errorLogger('❌ Cannot execute seeding, MongoDB is not connected');
             return false;
         }
 

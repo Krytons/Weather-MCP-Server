@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 
+import Debug from "debug";
+const infoLogger = Debug("ValidationMiddleware:log");
+const errorLogger = Debug("ValidationMiddleware:error");
+
 export class ValidationMiddleware {
     
     /**
@@ -12,6 +16,7 @@ export class ValidationMiddleware {
      * @returns 
      */
     static checkMCPValidation(req: Request, res: Response, next: NextFunction): void {
+        infoLogger(`ℹ️ Checking mcp validation for request`);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             res.status(400).json({
@@ -37,6 +42,7 @@ export class ValidationMiddleware {
      * @returns 
      */
     static checkStandardValidation(req: Request, res: Response, next: NextFunction): void {
+        infoLogger(`ℹ️ Checking standard validation for request`);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             res.status(400).json({

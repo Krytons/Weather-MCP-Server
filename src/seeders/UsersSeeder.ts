@@ -4,6 +4,10 @@ import { SeederOptions } from "../types/Seeders";
 import { readFileSync } from 'fs';
 import {randomBytes, createHash} from 'crypto';
 
+import Debug from "debug";
+const infoLogger = Debug("UserSeeder:log");
+const errorLogger = Debug("UserSeeder:error");
+
 export class UsersSeeder implements SeederInterface {
     public options : SeederOptions;
 
@@ -25,7 +29,7 @@ export class UsersSeeder implements SeederInterface {
      * @returns {Promise<boolean>} - Returns true if the seeding process was successful, false otherwise.
      */
     async seed(): Promise<boolean> {
-        console.log('[USER-SEEDER] 🌱 Starting user seeding process...');
+        infoLogger('🌱 Starting user seeding process...');
 
         //STEP 1 -- Check if we need to drop existing users       
         if (this.options.dropExisting)
@@ -33,7 +37,7 @@ export class UsersSeeder implements SeederInterface {
 
         //STEP 2 -- Get processing emails
         if(!this.setProcessingEmails()) {
-            console.error('[USER-SEEDER] ❌ No emails found for seeding. Exiting...');
+            errorLogger('❌ No emails found for seeding. Exiting...');
             return false;
         }
 
@@ -42,7 +46,7 @@ export class UsersSeeder implements SeederInterface {
             try {
                 //STEP 3.1 -- Validate email format
                 if (!email || !email.includes('@')) {
-                    console.error(`[USER-SEEDER] ❌ Invalid email format: ${email}`);
+                    errorLogger(`❌ Invalid email format: ${email}`);
                     this.errorUsers.push(email);
                     continue;
                 }   
@@ -50,7 +54,7 @@ export class UsersSeeder implements SeederInterface {
                 //STEP 3.2 -- Check if email already exists in the database
                 const existingUser = await User.findOne({ email: email.toLowerCase() });
                 if (existingUser) {
-                    console.log(`[USER-SEEDER] 🛑 User with email ${email} already exists. Skipping...`);
+                    infoLogger(`🛑 User with email ${email} already exists. Skipping...`);
                     this.skippedUsers.push(email);
                     continue;
                 }
@@ -60,7 +64,7 @@ export class UsersSeeder implements SeederInterface {
                 let hashedApiKey = this.generateHashedApiKey(plainApiKey);
 
                 //STEP 3.4 -- Create new user
-                console.log(`[USER-SEEDER] 📧 Creating user with email: ${email}`);
+                infoLogger(`📧 Creating user with email: ${email}`);
                 const newUser = new User({
                     email: email.toLowerCase(),
                     apiKey: hashedApiKey, 
@@ -71,20 +75,20 @@ export class UsersSeeder implements SeederInterface {
                 await newUser.save();
 
                 this.createdUsers.push(newUser);
-                console.log(`[USER-SEEDER] ✅ Created user with email: ${email} | API key assigned: ${plainApiKey}`);
+                infoLogger(`✅ Created user with email: ${email} | API key assigned: ${plainApiKey}`);
             } 
             catch (error) {
-                console.error(`[USER-SEEDER] ❌ Error creating user with email ${email}:`, error);
+                errorLogger(`❌ Error creating user with email ${email}:`, error);
                 this.errorUsers.push(email);
             }
         }
 
         //STEP 4 -- Log the results
-        console.log('[USER-SEEDER] 🌱 User seeding process completed');
-        console.log('\n📊 Seeding Summary:');
-        console.log(`✅ Created: ${this.createdUsers.length} users`);
-        console.log(`⏭️ Skipped: ${this.skippedUsers.length} users`);
-        console.log(`❌ Errors: ${this.errorUsers.length} users`);
+        infoLogger('🌱 User seeding process completed');
+        infoLogger('📊 Seeding Summary:');
+        infoLogger(`✅ Created: ${this.createdUsers.length} users`);
+        infoLogger(`⏭️ Skipped: ${this.skippedUsers.length} users`);
+        infoLogger(`❌ Errors: ${this.errorUsers.length} users`);
         return true;
     }
 
@@ -96,12 +100,12 @@ export class UsersSeeder implements SeederInterface {
      */
     private async dropExistingUsers(): Promise<void> {
         try {
-            console.log('[USER-SEEDER] 🗑️ Dropping existing users...');
+            infoLogger('🗑️ Dropping existing users...');
             await User.deleteMany({});
-            console.log('[USER-SEEDER] ✅ Existing users dropped');
+            infoLogger('✅ Existing users dropped');
         } 
         catch (error) {
-            console.error('[USER-SEEDER] ❌ Error dropping existing users:', error);
+            errorLogger('❌ Error dropping existing users:', error);
             throw error;
         }
     }
@@ -116,21 +120,21 @@ export class UsersSeeder implements SeederInterface {
         //STEP 1 -- Check if we need to seed from file or env. Use default emails if none of previous options are set
         if (this.options.seedFromFile){
             try {
-                console.log('[USER-SEEDER] 📂 Seeding users from file:', this.seedFilePath);
+                infoLogger('📂 Seeding users from file:', this.seedFilePath);
                 this.usersEmails = JSON.parse(readFileSync('./emails.json', 'utf8'));
             } 
             catch (error) {
-                console.error('[USER-SEEDER] ❌ Error reading seed file:', error);
+                errorLogger('❌ Error reading seed file:', error);
                 return false;
             }
         }
         else if (this.options.seedFromEnv){
-            console.log('[USER-SEEDER] 🌳 Seeding users from env:');
+            infoLogger('🌳 Seeding users from env:');
             const emailsString = process.env.USERS_SEED_EMAILS || '';
             this.usersEmails = emailsString.split(',').map(email => email.trim()).filter(email => email);
         }
         else {
-            console.log('[USER-SEEDER] 🧾 Seeding users from default configuration:');
+            infoLogger('🧾 Seeding users from default configuration:');
             this.usersEmails = [
                 'bartolomeo.caruso@skylabs.it',
                 'arturo.marzo@skylabs.it',
@@ -140,7 +144,7 @@ export class UsersSeeder implements SeederInterface {
 
         //STEP 2 -- Check if any emails were found
         if (!this.usersEmails || this.usersEmails.length === 0) {
-            console.log('❌ No emails found in SEED_EMAILS environment variable');
+            infoLogger('❌ No emails found in SEED_EMAILS environment variable');
             return false;
         }
         return true;

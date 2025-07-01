@@ -4,6 +4,10 @@ import { check } from "express-validator";
 import { UsersController } from "../../controllers/UsersController";
 import { ValidationMiddleware } from "../../middlewares/ValidationMiddleware";
 
+import Debug from "debug";
+const infoLogger = Debug("UserRouter:log");
+const errorLogger = Debug("UserRouter:error");
+
 export class UsersRouter implements APIRouterInterface {
     public router: Router;
     public basePath: string;
@@ -21,6 +25,8 @@ export class UsersRouter implements APIRouterInterface {
     }
 
     public async defineRoutes(): Promise<void> {
+        infoLogger(`ℹ️ Defining routes for UsersRouter at base path: ${this.basePath}`);
+
         /**
          * Authentication route.
          * This route allows users to authenticate using their email and API key.

@@ -6,6 +6,10 @@ import { MCPRouterInterface } from '../interfaces/Routers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { MongoDatabase } from './MongoDatabase';
 
+import Debug from "debug";
+const infoLogger = Debug("ExpressServer:log");
+const errorLogger = Debug("ExpressServer:error");
+
 export class ExpressServer{
     private app: express.Application;
     private port: number;
@@ -68,15 +72,15 @@ export class ExpressServer{
 
         //STEP 3 - Attach routes
         this.versionedRouter.defineRoutes().then(() => {
-            console.log(`[EXPRESS-SERVER] 🗺️ Routes defined for version: ${this.versionedRouter.getVersion()}`);
+            infoLogger(`🗺️ Routes defined for version: ${this.versionedRouter.getVersion()}`);
             this.app.use(this.versionedRouter.getRouter());
         }).catch((error) => {
-            console.error(`[EXPRESS-SERVER] ❌ Error defining routes for version ${this.versionedRouter.getVersion()}:`, error);
+            errorLogger(`❌ Error defining routes for version ${this.versionedRouter.getVersion()}:`, error);
         });
 
         //STEP 4 - Connect to MongoDB
         this.database.connect().then(() => {
-            console.log('[EXPRESS-SERVER] ✅ MongoDB connected successfully');
+            infoLogger('✅ MongoDB connected successfully');
             this.database.executeSeeding({
                 dropExisting: process.env.SEED_DROP_EXISTING === 'true',
                 skipExisting: process.env.SEED_SKIP_EXISTING === 'true',
@@ -84,7 +88,7 @@ export class ExpressServer{
                 seedFromEnv: process.env.SEED_FROM_ENV === 'true'
             });
         }).catch((error) => {
-            console.error('[EXPRESS-SERVER] ❌ MongoDB connection failed:', error);
+            errorLogger('❌ MongoDB connection failed:', error);
             process.exit(1);
         });
     }
@@ -102,10 +106,10 @@ export class ExpressServer{
 
         switch (error.code) {
             case 'EACCES':
-                console.error(bind + ' requires elevated privileges');
+                errorLogger(bind + ' requires elevated privileges');
                 process.exit(1);
             case 'EADDRINUSE':
-                console.error(bind + ' is already in use');
+                errorLogger(bind + ' is already in use');
                 process.exit(1);
             default:
                 throw error;
@@ -119,6 +123,6 @@ export class ExpressServer{
     private onListening(): void {
         const addr = this.server.address();
         const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr?.port;
-        console.log('[EXPRESS-SERVER] ✅ Listening on ' + bind);
+        infoLogger('✅ Listening on ' + bind);
     }
 } 

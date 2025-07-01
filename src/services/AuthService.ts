@@ -3,6 +3,10 @@ import { AuthResponse, AuthTokenPayload } from '../interfaces/Auth';
 import { User } from '../models/User';
 import jwt from 'jsonwebtoken';
 
+import Debug from "debug";
+const infoLogger = Debug("WeatherService:log");
+const errorLogger = Debug("WeatherService:error");
+
 
 export class AuthService{
     private readonly jwtSecret: string;
@@ -40,7 +44,7 @@ export class AuthService{
             return timingSafeEqual(Buffer.from(firstHash, 'hex'), Buffer.from(secondHash, 'hex'));
         }
         catch(error){
-            console.error('❌ Hashing comparison error:', error);
+            errorLogger('❌ Hashing comparison error:', error);
             return false;
         }
     }
@@ -55,6 +59,7 @@ export class AuthService{
     public async authenticate(email : string, apiKey : string): Promise<AuthResponse>{
         try{
             //STEP 1 -- Check required parameters
+            infoLogger(`ℹ️ Authenticating user with email: ${email}`);
             if(!email || !apiKey)
                 return {
                     success: false,
@@ -97,7 +102,7 @@ export class AuthService{
             }
         }
         catch(error){
-            console.log('❌ Authenticate error: ', error);
+            errorLogger('❌ Authenticate error: ', error);
             return {
                 success: false,
                 message: 'Internal authentication error',
@@ -116,7 +121,7 @@ export class AuthService{
             const decoded = jwt.verify(token, this.jwtSecret) as AuthTokenPayload;
             return decoded;
         } catch (error) {
-            console.error('❌ Token verification error:', error);
+            errorLogger('❌ Token verification error:', error);
             return null;
         }
     }

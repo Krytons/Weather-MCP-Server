@@ -2,6 +2,9 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { WeatherTools } from './tools/WeatherTools';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
+import Debug from "debug";
+const infoLogger = Debug("Index:log");
+
 
 //STEP 0 - Load environment variables
 import dotenv from 'dotenv';
@@ -20,7 +23,7 @@ const server = new McpServer({
 const weather_tools = new WeatherTools();
 let current_tools = weather_tools.getTools();
 current_tools.forEach(current_tool => {
-    console.log(`Registering tool: ${current_tool.toolName}`);
+    infoLogger(`⚒️ Registering tool: ${current_tool.toolName}`);
     server.registerTool(
         current_tool.toolName,
         {
@@ -35,10 +38,12 @@ server.sendToolListChanged();
 
 //STEP 3 - Run the server using command line transport
 if(process.env.MODE === 'stdio') {
+    infoLogger("ℹ️ Running in stdio mode");
     const transport = new StdioServerTransport();
     server.connect(transport);
 }
 else {
+    infoLogger("ℹ️ Running in server mode");
     let expressServer = new ExpressServer(process.env.PORT ? parseInt(process.env.PORT as string, 10) : 3000, server);
     expressServer.start();
 }
