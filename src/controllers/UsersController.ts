@@ -16,10 +16,11 @@ export class UsersController {
         try {
             const authResponse = await this.authService.authenticate(email, apiKey);
             if (!authResponse.success) {
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     message: authResponse.message
                 });
+                return;
             }
 
             //STEP 3 -- Return the JWT token as AuthResponse
