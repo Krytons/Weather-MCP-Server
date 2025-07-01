@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { randomUUID } from "crypto";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { APIRouterInterface } from "../../interfaces/Routers";
-import { AuthRouter } from "./AuthRouter";
+import { UsersRouter } from "./UsersRouter";
 
 export class V1Router extends BaseMCPRouter {
     private apiRouters : APIRouterInterface[];
@@ -14,7 +14,7 @@ export class V1Router extends BaseMCPRouter {
         super(router, version, server);
 
         this.apiRouters = [];
-        this.apiRouters.push(new AuthRouter())
+        this.apiRouters.push(new UsersRouter())
     }
 
     public async defineRoutes(): Promise<void> {

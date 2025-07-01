@@ -1,0 +1,38 @@
+import { Request, Response, NextFunction } from 'express';
+import { AuthService } from '../services/AuthService';
+
+export class UsersController {
+    private authService : AuthService;
+
+    constructor() {
+       this.authService = new AuthService();
+    }      
+    
+    public async authenticate(req: Request, res: Response, next: NextFunction) : Promise<void> {
+        //STEP 1 -- Extract email and API key from request body
+        const { email, apiKey } = req.body;
+
+        //STEP 2 -- Get a JWT token for the user
+        try {
+            const authResponse = await this.authService.authenticate(email, apiKey);
+            if (!authResponse.success) {
+                return res.status(401).json({
+                    success: false,
+                    message: authResponse.message
+                });
+            }
+
+            //STEP 3 -- Return the JWT token as AuthResponse
+            res.status(200).json(authResponse);
+            next();
+        } 
+        catch (error) {
+            console.error('[USER-CONTROLLER] ❌ Authenticate error: ', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal authentication error'
+            });  
+            return;
+        }          
+    }
+}

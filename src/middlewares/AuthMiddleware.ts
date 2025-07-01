@@ -2,14 +2,35 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { AuthTokenPayload } from '../interfaces/Auth';
 
-
+/**
+ * Singleton AuthMiddleware class for handling authentication in Express.js applications.
+ */
 export class AuthMiddleware {
+    private static instance: AuthMiddleware;
     private authService : AuthService;
 
-    constructor(){
+    private constructor(){
         this.authService = new AuthService();
     }
+    
+    public static getInstance(): AuthMiddleware {
+        if (!AuthMiddleware.instance) 
+            AuthMiddleware.instance = new AuthMiddleware();
+        
+        return AuthMiddleware.instance;
+    }
 
+    /**
+     * Middleware function to authenticate requests using Bearer tokens.
+     * This function checks for the presence of an Authorization header,
+     * verifies the Bearer token, and enhances the response locals with user data.
+     * If the token is valid, it allows the request to proceed to the next middleware or route handler.
+     * If the token is invalid or missing, it responds with a 401 Unauthorized status and an error message.
+     * @param req 
+     * @param res 
+     * @param next 
+     * @returns 
+     */
     public authenticate(req: Request, res: Response, next: NextFunction) : void{
         try{
             //STEP 1 -- Verify authorization headers
