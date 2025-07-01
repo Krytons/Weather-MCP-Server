@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { DatabaseInterface } from "../interfaces/Database";
+import { SeederOptions } from "../types/Seeders";
+import { UsersSeeder } from "../seeders/UsersSeeder";
 
 const CONNECTION_EVENTS = {
     ERROR : 'error',
@@ -14,7 +16,7 @@ export class MongoDatabase implements DatabaseInterface {
         this.isConnected = false;
     }
 
-    public get instance(): MongoDatabase{
+    public static getInstance(): MongoDatabase{
         if(!MongoDatabase.instance)
             MongoDatabase.instance = new MongoDatabase();
 
@@ -53,7 +55,6 @@ export class MongoDatabase implements DatabaseInterface {
             console.error('❌ MongoDB connection failed:', error);
             return false;
         }
-        
     }
 
     public async disconnect(): Promise<boolean> {
@@ -65,6 +66,21 @@ export class MongoDatabase implements DatabaseInterface {
         await mongoose.disconnect();
         this.isConnected = false;
         console.log('✅ MongoDB disconnected successfully');
+        return true;
+    }
+
+    public async executeSeeding(options : SeederOptions): Promise<boolean>{
+        //STEP 1 -- Check if database is connected
+        if(!this.isDatabaseConnected()){
+            console.error('❌ Cannot execute seeding, MongoDB is not connected');
+            return false;
+        }
+
+        //STEP 2 -- Execute seeding logic (to be implemented in seeders)
+        let userSeeder = new UsersSeeder(options);
+        await userSeeder.seed();
+        
+        // Return true to indicate successful seeding
         return true;
     }
     

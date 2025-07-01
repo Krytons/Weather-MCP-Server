@@ -7,7 +7,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { APIRouterInterface } from "../../interfaces/Routers";
 import { UsersRouter } from "./UsersRouter";
 
-export class V1Router extends BaseMCPRouter {
+export class MCPRouter extends BaseMCPRouter {
     private apiRouters : APIRouterInterface[];
 
     constructor(router: Router, version: string, server: McpServer) {

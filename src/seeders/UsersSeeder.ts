@@ -20,7 +20,11 @@ export class UsersSeeder implements SeederInterface {
     }
 
 
-    async seed(): Promise<void> {
+    /**
+     * This method seeds the database with user data.
+     * @returns {Promise<boolean>} - Returns true if the seeding process was successful, false otherwise.
+     */
+    async seed(): Promise<boolean> {
         console.log('[USER-SEEDER] 🌱 Starting user seeding process...');
 
         //STEP 1 -- Check if we need to drop existing users       
@@ -30,7 +34,7 @@ export class UsersSeeder implements SeederInterface {
         //STEP 2 -- Get processing emails
         if(!this.setProcessingEmails()) {
             console.error('[USER-SEEDER] ❌ No emails found for seeding. Exiting...');
-            return;
+            return false;
         }
 
         //STEP 3 -- Process each email
@@ -74,6 +78,14 @@ export class UsersSeeder implements SeederInterface {
                 this.errorUsers.push(email);
             }
         }
+
+        //STEP 4 -- Log the results
+        console.log('[USER-SEEDER] 🌱 User seeding process completed');
+        console.log('\n📊 Seeding Summary:');
+        console.log(`✅ Created: ${this.createdUsers.length} users`);
+        console.log(`⏭️ Skipped: ${this.skippedUsers.length} users`);
+        console.log(`❌ Errors: ${this.errorUsers.length} users`);
+        return true;
     }
 
 

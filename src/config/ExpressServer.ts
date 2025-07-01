@@ -4,6 +4,7 @@ import cors from 'cors';
 import { RouterFactory } from '../routes/RouterFactory';
 import { MCPRouterInterface } from '../interfaces/Routers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { MongoDatabase } from './MongoDatabase';
 
 export class ExpressServer{
     private app: express.Application;
@@ -11,6 +12,7 @@ export class ExpressServer{
     private server: http.Server;
     private mcpServer : McpServer;
     private versionedRouter: MCPRouterInterface;
+    private database : MongoDatabase;
 
 
     /**
@@ -26,6 +28,8 @@ export class ExpressServer{
 
         const routerFactory = new RouterFactory(process.env.VERSION || 'v1');
         this.versionedRouter = routerFactory.getVersionedRouter(this.mcpServer);
+
+        this.database = MongoDatabase.getInstance();
     }
 
 
@@ -64,10 +68,24 @@ export class ExpressServer{
 
         //STEP 3 - Attach routes
         this.versionedRouter.defineRoutes().then(() => {
-            console.log(`Routes defined for version: ${this.versionedRouter.getVersion()}`);
+            console.log(`[EXPRESS-SERVER] 🗺️ Routes defined for version: ${this.versionedRouter.getVersion()}`);
             this.app.use(this.versionedRouter.getRouter());
         }).catch((error) => {
-            console.error(`Error defining routes for version ${this.versionedRouter.getVersion()}:`, error);
+            console.error(`[EXPRESS-SERVER] ❌ Error defining routes for version ${this.versionedRouter.getVersion()}:`, error);
+        });
+
+        //STEP 4 - Connect to MongoDB
+        this.database.connect().then(() => {
+            console.log('[EXPRESS-SERVER] ✅ MongoDB connected successfully');
+            this.database.executeSeeding({
+                dropExisting: process.env.SEED_DROP_EXISTING === 'true',
+                skipExisting: process.env.SEED_SKIP_EXISTING === 'true',
+                seedFromFile: process.env.SEED_FROM_FILE === 'true',
+                seedFromEnv: process.env.SEED_FROM_ENV === 'true'
+            });
+        }).catch((error) => {
+            console.error('[EXPRESS-SERVER] ❌ MongoDB connection failed:', error);
+            process.exit(1);
         });
     }
 
@@ -86,11 +104,9 @@ export class ExpressServer{
             case 'EACCES':
                 console.error(bind + ' requires elevated privileges');
                 process.exit(1);
-                break;
             case 'EADDRINUSE':
                 console.error(bind + ' is already in use');
                 process.exit(1);
-                break;
             default:
                 throw error;
         }
@@ -103,6 +119,6 @@ export class ExpressServer{
     private onListening(): void {
         const addr = this.server.address();
         const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr?.port;
-        console.log('Listening on ' + bind);
+        console.log('[EXPRESS-SERVER] ✅ Listening on ' + bind);
     }
 } 
