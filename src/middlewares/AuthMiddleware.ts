@@ -15,6 +15,9 @@ export class AuthMiddleware {
 
     private constructor(){
         this.authService = new AuthService();
+
+        // Bind the authenticate method to the instance
+        this.authenticate = this.authenticate.bind(this);
     }
     
     public static getInstance(): AuthMiddleware {
@@ -38,40 +41,79 @@ export class AuthMiddleware {
     public authenticate(req: Request, res: Response, next: NextFunction) : void{
         infoLogger(`ℹ️ Received request for authentication`);
         try{
+            //STEP 0 -- Check if callee is an MCP request
+            const isMCPRequest = req.path.includes('/mcp');
+
             //STEP 1 -- Verify authorization headers
             let authHeader = req.headers.authorization;
-            if(!authHeader){
-                res.status(401).json({
-                    uccess: false,
-                    message: 'Authorization header is required'
-                });
+            if (!authHeader) {
+                if (isMCPRequest) {
+                    res.status(401).json({
+                        jsonrpc: '2.0',
+                        error: {
+                            code: -32001,
+                            message: 'Authorization header is required'
+                        },
+                        id: req?.body?.id || null
+                    });
+                } 
+                else {
+                    res.status(401).json({
+                        success: false,
+                        message: 'Authorization header is required'
+                    });
+                }
                 return;
             }
 
             //STEP 2 -- Check Bearer Token
             let token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
-            if(!token){
-                res.status(401).json({
-                    uccess: false,
-                    message: 'Token is required'
-                });
+            if (!token || token.trim() === '') {
+                if (isMCPRequest) {
+                    res.status(401).json({
+                        jsonrpc: '2.0',
+                        error: {
+                            code: -32001,
+                            message: 'Token is required'
+                        },
+                        id: req?.body?.id || null
+                    });
+                } 
+                else {
+                    res.status(401).json({
+                        success: false,
+                        message: 'Token is required'
+                    });
+                }
                 return;
             }
 
             //STEP 3 -- Verify Bearer Token
-            let payload : AuthTokenPayload | null = this.authService.verifyToken(token);
-            if(!payload){
-                res.status(401).json({
-                    error: "Unauthorized",
-                    message: "Invalid or expired token"
-                });
+            let payload: AuthTokenPayload | null = this.authService.verifyToken(token);
+            if (!payload) {
+                if (isMCPRequest) {
+                    res.status(401).json({
+                        jsonrpc: '2.0',
+                        error: {
+                            code: -32001,
+                            message: 'Invalid or expired token'
+                        },
+                        id: req?.body?.id || null
+                    });
+                } else {
+                    res.status(401).json({
+                        error: "Unauthorized",
+                        message: "Invalid or expired token"
+                    });
+                }
                 return;
             }
 
             //STEP 4 -- Enhance response locals by adding user data
+            infoLogger(`✅ Auth was successful for user: ${payload.userID} (${payload.email})`);
             res.locals.user = {
-                userID : payload.userID,
-                userEmail : payload.email
+                userID: payload.userID,
+                userEmail: payload.email
             }
             return next();
         }

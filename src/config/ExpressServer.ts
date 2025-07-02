@@ -78,7 +78,19 @@ export class ExpressServer{
             errorLogger(`❌ Error defining routes for version ${this.versionedRouter.getVersion()}:`, error);
         });
 
-        //STEP 4 - Connect to MongoDB
+        //STEP 4 - Add parsing error handler
+        this.app.use(((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+            if (err instanceof SyntaxError && (err as any)?.status === 400 && 'body' in err) {
+                errorLogger('❌ Bad Request: Invalid JSON syntax');
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'Invalid JSON syntax'
+                });
+            }
+            next(err); // Pass the error to the next middleware
+        }) as express.ErrorRequestHandler);
+
+        //STEP 5 - Connect to MongoDB
         this.database.connect().then(() => {
             infoLogger('✅ MongoDB connected successfully');
             this.database.executeSeeding({

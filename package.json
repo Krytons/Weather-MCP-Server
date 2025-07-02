@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "start:errors": "DEBUG=*:error npm start",
     "start:debug": "DEBUG=*:log,*:error npm start",
-    "start:verbose": "DEBUG=* start"
+    "start:verbose": "DEBUG=* npm start"
   },
   "keywords": [
     "MCP",

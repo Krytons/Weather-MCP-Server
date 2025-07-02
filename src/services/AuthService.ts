@@ -4,8 +4,8 @@ import { User } from '../models/User';
 import jwt from 'jsonwebtoken';
 
 import Debug from "debug";
-const infoLogger = Debug("WeatherService:log");
-const errorLogger = Debug("WeatherService:error");
+const infoLogger = Debug("AuthService:log");
+const errorLogger = Debug("AuthService:error");
 
 
 export class AuthService{

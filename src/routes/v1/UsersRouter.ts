@@ -16,7 +16,7 @@ export class UsersRouter implements APIRouterInterface {
     
     constructor (){
         this.router = Router();
-        this.basePath = '/auth';
+        this.basePath = '/v1/users';
         this.usersController = new UsersController();
     }
     
