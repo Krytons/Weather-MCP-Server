@@ -1,14 +1,36 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { BaseRouter } from "../BaseRouter";
+import { BaseMCPRouter } from "../BaseMCPRouter";
 import { Router, Request, Response, NextFunction } from 'express';
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { randomUUID } from "crypto";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { APIRouterInterface } from "../../interfaces/Routers";
+import { UsersRouter } from "./UsersRouter";
 
-export class V1Router extends BaseRouter {
+import Debug from "debug";
+import { AuthMiddleware } from "../../middlewares/AuthMiddleware";
+import { ValidationMiddleware } from '../../middlewares/ValidationMiddleware';
+import { check } from "express-validator";
+const infoLogger = Debug("MCPRouter:log");
+const errorLogger = Debug("MCPRouter:error");
+
+export class MCPRouter extends BaseMCPRouter {
+    private apiRouters : APIRouterInterface[];
+    private authMiddlewareInstance : AuthMiddleware;
+
     constructor(router: Router, version: string, server: McpServer) {
         super(router, version, server);
+
+        this.apiRouters = [];
+        this.apiRouters.push(new UsersRouter())
+        this.authMiddlewareInstance = AuthMiddleware.getInstance();
     }
+
+     private readonly mcpCommonValidations = [
+        check('jsonrpc').optional().equals('2.0').withMessage('jsonrpc must be "2.0"'),
+        check('method').optional().isString().notEmpty().withMessage('method must be a non-empty string'),
+        check('id').optional().isNumeric().withMessage('id must be numeric if provided')
+    ];
 
     public async defineRoutes(): Promise<void> {
         super.defineRoutes();
@@ -19,6 +41,7 @@ export class V1Router extends BaseRouter {
          * This route responds with a welcome message and the API version.
          */
         this.router.get('/v1', (req : Request, res : Response) => {
+            infoLogger(`Received request for v1 health check`);
             res.status(200).json({
                 message: `Welcome to the API! You are using version v1`
             });
@@ -33,8 +56,9 @@ export class V1Router extends BaseRouter {
          * The session ID is stored in the `transports` object for later reference.
          * The transport is closed when the session ends, and the session ID is removed from the `transports` object.
          */
-        this.router.post('/mcp', async (req: Request, res: Response, next : NextFunction) => {
+        this.router.post('/mcp', this.mcpCommonValidations, ValidationMiddleware.checkMCPValidation, this.authMiddlewareInstance.authenticate, async (req: Request, res: Response, next : NextFunction) => {
             //STEP 1 -- Get session from header and define transport
+            infoLogger(`ℹ️ Received MCP request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
             let currentTransport: StreamableHTTPServerTransport;
             if(mcpSession && this.transports[mcpSession])
@@ -81,8 +105,9 @@ export class V1Router extends BaseRouter {
          * If the session ID is valid, it handles the request using the current transport.
          * If the session ID is invalid or missing, it responds with a 400 Bad Request status.
          */
-        this.router.get('/mcp', async (req: Request, res: Response,  next : NextFunction) => {
+        this.router.get('/mcp', this.mcpCommonValidations, ValidationMiddleware.checkMCPValidation, this.authMiddlewareInstance.authenticate, async (req: Request, res: Response,  next : NextFunction) => {
             //STEP 1 -- Get session from header and check if it exists
+            infoLogger(`ℹ️ Received MCP request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
             if (!mcpSession || !this.transports[mcpSession]) {
                 res.status(400).json({
@@ -109,8 +134,9 @@ export class V1Router extends BaseRouter {
          * If the session ID is valid, it closes the transport session and responds with a success message.
          * If the session ID is invalid or missing, it responds with a 400 Bad Request status.
          */
-        this.router.delete('/mcp', async (req: Request, res: Response, next : NextFunction) => {
+        this.router.delete('/mcp', this.mcpCommonValidations, ValidationMiddleware.checkMCPValidation, this.authMiddlewareInstance.authenticate, async (req: Request, res: Response, next : NextFunction) => {
             //STEP 1 -- Get session from header and check if it exists
+            infoLogger(`ℹ️ Received MCP delete request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
             if (!mcpSession || !this.transports[mcpSession]) {
                 res.status(400).json({
@@ -132,10 +158,16 @@ export class V1Router extends BaseRouter {
             });
             return next();
         });
-    }
 
-    public async defineSpecificRoutes(): Promise<void> {
-        
+
+        /**
+         * Add secondary support routes
+         */
+        for (const apiRouter of this.apiRouters){
+            infoLogger(`ℹ️ Calling define routes routine for: ${apiRouter.basePath}`);
+            await apiRouter.defineRoutes();
+            this.router.use(apiRouter.basePath, apiRouter.getRouter());
+        }
     }
 }
     

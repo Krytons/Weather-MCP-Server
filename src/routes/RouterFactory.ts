@@ -1,8 +1,6 @@
-import express from 'express';
-import type { Router } from 'express';
-import { RouterFactoryInterface, RouterInterface } from '../interfaces/Routers';
+import { Router } from 'express';
+import { RouterFactoryInterface, MCPRouterInterface } from '../interfaces/Routers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { V1Router } from './v1/V1Router';
 
 export class RouterFactory implements RouterFactoryInterface {
     public router : Router;
@@ -14,7 +12,7 @@ export class RouterFactory implements RouterFactoryInterface {
      * @param version - The version of the API to create the router for.
      */
     constructor(version: string) {
-        this.router = express.Router();
+        this.router = Router();
         this.version = version || 'v1';
     }
 
@@ -28,14 +26,14 @@ export class RouterFactory implements RouterFactoryInterface {
     }
 
     
-    public getVersionedRouter(server : McpServer): RouterInterface{
+    public getVersionedRouter(server : McpServer): MCPRouterInterface{
         switch (this.version) {
             case 'v1':
-                const { V1Router } = require('./v1/V1Router');
-                return new V1Router(this.router, this.version, server);
+                const { MCPRouter } = require('./v1/MCPRouter');
+                return new MCPRouter(this.router, this.version, server);
             default:
-                const { BaseRouter } = require('./BaseRouter');
-                return new BaseRouter(this.router, this.version, server);
+                const { BaseMCPRouter } = require('./BaseMCPRouter');
+                return new BaseMCPRouter(this.router, this.version, server);
         }
     }
 }

@@ -1,5 +1,9 @@
 import { CurrentWeatherServiceResponse, CurrentWeatherToolResponse } from "../types/CurrentWeather";
 
+import Debug from "debug";
+const infoLogger = Debug("WeatherService:log");
+const errorLogger = Debug("WeatherService:error");
+
 export class WeatherService {
     private API_KEY: string;
     private BASE_URL: string;
@@ -27,6 +31,7 @@ export class WeatherService {
     getCurrentWeather(city: string): Promise<CurrentWeatherToolResponse> {
         const endpoint = this.ENDPOINTS.current.replace('{city}', city).replace('{API_KEY}', this.API_KEY);
         const url = `${this.BASE_URL}/${endpoint}`;
+        infoLogger(`ℹ️ Fetching current weather for city: ${city} using URL: ${url}`);
 
         return fetch(url)
             .then(response => {
@@ -42,7 +47,7 @@ export class WeatherService {
                 } as CurrentWeatherToolResponse;
             })
             .catch((error : Error) => {
-                console.error('Error: ', error.message);
+                errorLogger('❌ Error: ', error.message);
                 throw error;
             });
     }
