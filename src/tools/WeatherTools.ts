@@ -5,11 +5,11 @@ import { TextContent } from "../types/Content";
 import { ToolDefinition, ToolInterface } from "../interfaces/Tools";
 
 export class WeatherTools implements ToolInterface {
-    WeatherService: WeatherService;
+    public WeatherService: WeatherService;
 
-    constructor() {
+    public constructor() {
         //STEP 1 -- Setup the WeatherService with the API key from environment variables
-        this.WeatherService = new WeatherService(process.env.API_KEY || '');
+        this.WeatherService = WeatherService.getInstance(process.env.API_KEY || '');
     }
 
     /**
@@ -18,7 +18,7 @@ export class WeatherTools implements ToolInterface {
      * @returns A promise that resolves to a TextContent object containing the weather information.
      * @throws An error if the weather data cannot be retrieved.
      */
-    async getCurrentWeather (params: CurrentWeatherToolParameters) : Promise<TextContent> {
+    public async getCurrentWeather (params: CurrentWeatherToolParameters) : Promise<TextContent> {
         try {
             const weatherToolResponse = await this.WeatherService.getCurrentWeather(params.city);
             return {

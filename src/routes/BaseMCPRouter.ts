@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { RouterInterface } from '../interfaces/Routers';
+import { MCPRouterInterface } from '../interfaces/Routers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
@@ -7,7 +7,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
  * BaseRouter class implements the ApplicationRouter type.
  * It provides a basic structure for defining routes in an Express application.
  */
-export class BaseRouter implements RouterInterface {
+export class BaseMCPRouter implements MCPRouterInterface {
     public router: Router;
     public version: string;
     public server : McpServer;

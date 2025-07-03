@@ -1,19 +1,37 @@
 import { CurrentWeatherServiceResponse, CurrentWeatherToolResponse } from "../types/CurrentWeather";
 
+import Debug from "debug";
+const infoLogger = Debug("WeatherService:log");
+const errorLogger = Debug("WeatherService:error");
+
 export class WeatherService {
+    public static instance: WeatherService;
+
     private API_KEY: string;
     private BASE_URL: string;
     private ENDPOINTS = {
         current: 'weather?q={city}&appid={API_KEY}',
     }
 
-    constructor(apiKey: string) {
+    
+    private constructor(apiKey: string) {
         if(!apiKey || apiKey.trim() === '')
             throw new Error('API key is required');
 
         this.API_KEY = apiKey;
         this.BASE_URL = 'https://api.openweathermap.org/data/2.5';
+
+        this.getCurrentWeather = this.getCurrentWeather.bind(this);
     }
+
+
+    public static getInstance(apiKey: string): WeatherService {
+        if (!WeatherService.instance) 
+            WeatherService.instance = new WeatherService(apiKey);
+        
+        return WeatherService.instance;
+    }   
+
 
     /**
      * This method retrieves the current weather for a specified city.
@@ -24,9 +42,10 @@ export class WeatherService {
      * @throws An error if the response from the API is not ok.
      * @throws An error if the response cannot be parsed as JSON.
      */
-    getCurrentWeather(city: string): Promise<CurrentWeatherToolResponse> {
+    public getCurrentWeather(city: string): Promise<CurrentWeatherToolResponse> {
         const endpoint = this.ENDPOINTS.current.replace('{city}', city).replace('{API_KEY}', this.API_KEY);
         const url = `${this.BASE_URL}/${endpoint}`;
+        infoLogger(`ℹ️ Fetching current weather for city: ${city} using URL: ${url}`);
 
         return fetch(url)
             .then(response => {
@@ -42,7 +61,7 @@ export class WeatherService {
                 } as CurrentWeatherToolResponse;
             })
             .catch((error : Error) => {
-                console.error('Error: ', error.message);
+                errorLogger('❌ Error: ', error.message);
                 throw error;
             });
     }
