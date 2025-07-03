@@ -29,6 +29,16 @@
 						}
 					},
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mcpAuthToken}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -89,6 +99,16 @@
 						}
 					},
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mcpAuthToken}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -109,7 +129,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": \"1\",\r\n  \"method\": \"getCurrentWeather\",\r\n  \"params\": {\r\n    \"city\" : \"Catania\"\r\n  }\r\n}\r\n",
+							"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": \"1\",\r\n  \"method\": \"tools/call\",\r\n  \"params\": {\r\n    \"name\": \"getCurrentWeather\",\r\n    \"arguments\": {\r\n      \"city\": \"Prague\"\r\n    }\r\n  }\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -142,10 +162,8 @@
 							"script": {
 								"exec": [
 									"var mcpHeader = pm.response.headers.find(function(header){\r",
-									"    console.log(header.key);\r",
 									"    return header.key.indexOf('mcp-session-id') !== -1;\r",
 									"});\r",
-									"console.log(pm.response.headers);\r",
 									"if(mcpHeader){\r",
 									"    console.log('Received valid MCP session ID: ' + mcpHeader.value);\r",
 									"    pm.collectionVariables.set(\"mcpSessionId\", mcpHeader.value);\r",
@@ -161,6 +179,16 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mcpAuthToken}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -216,6 +244,16 @@
 						}
 					},
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mcpAuthToken}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -251,6 +289,66 @@
 							"port": "3000",
 							"path": [
 								"mcp"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Authenticate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"\r",
+									"let jsonResponse = pm.response.json();\r",
+									"if(jsonResponse?.token){\r",
+									"    console.log('Received valid JWT token');\r",
+									"    pm.collectionVariables.set('mcpAuthToken', jsonResponse.token);\r",
+									"}\r",
+									"else\r",
+									"    console.error('Error: Could not set JWT token');\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\" : \"{{mcpUserEmail}}\",\r\n    \"apiKey\" : \"{{mcpAPIKey}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/v1/users/auth",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"v1",
+								"users",
+								"auth"
 							]
 						}
 					},
@@ -304,6 +402,20 @@
 			"key": "mcpSessionId",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "mcpUserEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "mcpAPIKey",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "mcpAuthToken",
+			"value": ""
 		}
 	]
 }
