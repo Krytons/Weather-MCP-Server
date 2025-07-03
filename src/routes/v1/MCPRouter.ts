@@ -13,7 +13,6 @@ import { MCPSessionService } from '../../services/MCPSessionService';
 import { MCPSessionInfo } from "../../types/MCP";
 
 import Debug from "debug";
-import { info } from "console";
 const infoLogger = Debug("MCPRouter:log");
 const errorLogger = Debug("MCPRouter:error");
 
@@ -29,6 +28,9 @@ export class MCPRouter extends BaseMCPRouter {
         this.apiRouters.push(new UsersRouter())
         this.authMiddlewareInstance = AuthMiddleware.getInstance();
         this.mcpSessionServiceInstance = MCPSessionService.getInstance();
+
+        infoLogger(`ℹ️ Starting MCP session cleanup scheduler with interval: ${process.env.MCP_SESSION_CLEANUP_INTERVAL || 60} minutes`);
+        this.mcpSessionServiceInstance.startCleanupScheduler(process.env.MCP_SESSION_CLEANUP_INTERVAL ? Number(process.env.MCP_SESSION_CLEANUP_INTERVAL) : 60);
     }
 
      private readonly mcpCommonValidations = [

@@ -25,6 +25,7 @@ export class MCPSessionService {
         return MCPSessionService.instance;
     }
 
+    
     /**
      * Function to create a session.
      * This function checks if a session with the given sessionId already exists.
@@ -238,5 +239,24 @@ export class MCPSessionService {
             errorLogger(`❌ Error cleaning up expired sessions:`, error);
             return false;
         }
+    }
+
+
+    /**
+     * Function to start a cleanup scheduler.
+     * This function sets up an interval to periodically clean up expired sessions.
+     * @param intervalMinutes The interval in minutes at which the cleanup should run.
+     */
+    public startCleanupScheduler(intervalMinutes: number): void {
+        infoLogger(`ℹ️ Setting cleanup scheduler with interval: ${intervalMinutes} ms`);
+        setInterval(async () => {
+            try {
+                await this.cleanUpExpiredSessions();
+            } 
+            catch (error) {
+                errorLogger(`❌ Error during cleanup scheduler:`, error);
+            }
+        }, intervalMinutes * 1000); // Convert minutes to milliseconds  
+        infoLogger(`✅ Cleanup scheduler set successfully`);
     }
 }
