@@ -6,17 +6,21 @@ import { randomUUID } from "crypto";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { APIRouterInterface } from "../../interfaces/Routers";
 import { UsersRouter } from "./UsersRouter";
-
-import Debug from "debug";
 import { AuthMiddleware } from "../../middlewares/AuthMiddleware";
 import { ValidationMiddleware } from '../../middlewares/ValidationMiddleware';
 import { check } from "express-validator";
+import { MCPSessionService } from '../../services/MCPSessionService';
+import { MCPSessionInfo } from "../../types/MCP";
+
+import Debug from "debug";
+import { info } from "console";
 const infoLogger = Debug("MCPRouter:log");
 const errorLogger = Debug("MCPRouter:error");
 
 export class MCPRouter extends BaseMCPRouter {
     private apiRouters : APIRouterInterface[];
     private authMiddlewareInstance : AuthMiddleware;
+    private mcpSessionServiceInstance : MCPSessionService;
 
     constructor(router: Router, version: string, server: McpServer) {
         super(router, version, server);
@@ -24,6 +28,7 @@ export class MCPRouter extends BaseMCPRouter {
         this.apiRouters = [];
         this.apiRouters.push(new UsersRouter())
         this.authMiddlewareInstance = AuthMiddleware.getInstance();
+        this.mcpSessionServiceInstance = MCPSessionService.getInstance();
     }
 
      private readonly mcpCommonValidations = [
@@ -41,7 +46,7 @@ export class MCPRouter extends BaseMCPRouter {
          * This route responds with a welcome message and the API version.
          */
         this.router.get('/v1', (req : Request, res : Response) => {
-            infoLogger(`Received request for v1 health check`);
+            infoLogger(`ℹ️ Received request for v1 health check`);
             res.status(200).json({
                 message: `Welcome to the API! You are using version v1`
             });
@@ -60,41 +65,83 @@ export class MCPRouter extends BaseMCPRouter {
             //STEP 1 -- Get session from header and define transport
             infoLogger(`ℹ️ Received MCP request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
-            let currentTransport: StreamableHTTPServerTransport;
-            if(mcpSession && this.transports[mcpSession])
-                currentTransport = this.transports[mcpSession];
-            else if(!mcpSession && isInitializeRequest(req.body)){
-                currentTransport = new StreamableHTTPServerTransport({
-                    sessionIdGenerator: () => randomUUID(),
-                    onsessioninitialized: (sessionId: string) => {
-                        this.transports[sessionId] = currentTransport;
+            const userId = res.locals.user.userID // Assumendo che l'auth middleware aggiunga l'user
+            const clientInfo = {
+                userAgent: req.headers['user-agent'],
+                ipAddress: req.ip
+            };
+
+            try{
+                //STEP 2 -- Define the current transport based on the session ID
+                let currentTransport: StreamableHTTPServerTransport;
+                if(mcpSession){
+                    let sessionInfo : MCPSessionInfo = await this.mcpSessionServiceInstance.getActiveSession(mcpSession, userId);
+                    if(!sessionInfo.session || !sessionInfo.transport){
+                        infoLogger(`⚠️ No active session found for ID: ${mcpSession}`);
+                        res.status(400).json({
+                            jsonrpc: '2.0',
+                            error: {
+                                code: -32000,
+                                message: 'Invalid session',
+                                data: 'Session ID is invalid or has expired.'
+                            },
+                            id: req?.body?.id || null
+                        });
+                        return next();
                     }
-                }); 
+                    else
+                        currentTransport = sessionInfo.transport;
+                }
+                else if(isInitializeRequest(req.body)){
+                    let newSessionID =  randomUUID();
+                    infoLogger(`ℹ️ Creating new MCP session with ID: ${newSessionID}`);
+                    currentTransport = new StreamableHTTPServerTransport({
+                        sessionIdGenerator: () => newSessionID,
+                        onsessioninitialized: async (sessionId: string) => {
+                            await this.mcpSessionServiceInstance.createSession(sessionId, currentTransport, userId, clientInfo);
+                        }
+                    }); 
+                    infoLogger(`✅ Session with ID: ${newSessionID} has been created successfully`);
 
-                 //STEP 1.A -- Define closing routine
-                currentTransport.onclose = () => {
-                    delete this.transports[currentTransport.sessionId as string];
-                };
+                    //STEP 2.A -- Define closing routine
+                    currentTransport.onclose = async () => {
+                    await this.mcpSessionServiceInstance.closeSession(newSessionID);
+                    };
 
-                //STEP 1.B -- Connect the transport to the server
-                await this.server.connect(currentTransport);
+                    //STEP 2.B -- Connect the transport to the server
+                    await this.server.connect(currentTransport);
+                }
+                else {
+                    res.status(400).json({
+                        jjsonrpc: '2.0',
+                        error: {
+                            code: -32000,
+                            message: 'Invalid request',
+                            data: 'Session ID is required for MCP requests.'
+                        },
+                        id: req?.body?.id || null
+                    });
+                    return next();
+                }
+
+                //STEP 2 -- Handle request using the current transport
+                infoLogger(`ℹ️ Handling request using transport with session ID: ${currentTransport.sessionId}`);
+                await currentTransport.handleRequest(req, res, req.body);
+                return next();
             }
-            else {
-                res.status(400).json({
-                    jjsonrpc: '2.0',
+            catch (error) {
+                errorLogger(`❌ Error processing MCP request:`, error);
+                res.status(500).json({
+                    jsonrpc: '2.0',
                     error: {
                         code: -32000,
-                        message: 'Invalid request',
-                        data: 'Session ID is required for MCP requests.'
+                        message: 'Internal server error',
+                        data: 'An unexpected error occurred while processing the request.'
                     },
                     id: req?.body?.id || null
                 });
                 return next();
             }
-
-            //STEP 2 -- Handle request using the current transport
-            await currentTransport.handleRequest(req, res, req.body);
-            return next();
         });
 
         
@@ -109,7 +156,7 @@ export class MCPRouter extends BaseMCPRouter {
             //STEP 1 -- Get session from header and check if it exists
             infoLogger(`ℹ️ Received MCP request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
-            if (!mcpSession || !this.transports[mcpSession]) {
+            if (!mcpSession) {
                 res.status(400).json({
                     jsonrpc: '2.0',
                     error: {
@@ -118,13 +165,43 @@ export class MCPRouter extends BaseMCPRouter {
                     },
                     id: null,
                 });
-                return;
+                return next();
             }
 
-            //STEP 2 -- Handle request using the current transport
-            let currentTransport: StreamableHTTPServerTransport = this.transports[mcpSession];
-            await currentTransport.handleRequest(req, res);
-            return next();
+            //STEP 2 -- Look for an active session
+            infoLogger(`ℹ️ Looking for active session with ID: ${mcpSession}`);
+            try {
+                const activeSessionInfo = await this.mcpSessionServiceInstance.getActiveSession(mcpSession);
+                if (!activeSessionInfo.session || !activeSessionInfo.transport) {
+                    infoLogger(`⚠️ No active session found for ID: ${mcpSession}`);
+                    res.status(400).json({
+                        jsonrpc: '2.0',
+                        error: {
+                            code: -32000,
+                            message: 'Bad Request: Invalid or expired session ID',
+                        },
+                        id: null,
+                    });
+                    return next();
+                }
+
+                //STEP 3 -- Handle request using the current transport
+                infoLogger(`ℹ️ Handling request using transport with session ID: ${activeSessionInfo.session.sessionId}`);
+                await activeSessionInfo.transport.handleRequest(req, res);
+                return next();
+            } 
+            catch (error) {
+                errorLogger(`❌ Error handling MCP GET request:`, error);
+                res.status(500).json({
+                    jsonrpc: '2.0',
+                    error: {
+                        code: -32603,
+                        message: 'Internal error',
+                    },
+                    id: null,
+                });
+                return next();
+            }
         });
 
 
@@ -138,7 +215,8 @@ export class MCPRouter extends BaseMCPRouter {
             //STEP 1 -- Get session from header and check if it exists
             infoLogger(`ℹ️ Received MCP delete request`);
             const mcpSession = req.headers['mcp-session-id'] as string | undefined;
-            if (!mcpSession || !this.transports[mcpSession]) {
+            if (!mcpSession) {
+                infoLogger(`⚠️ No active session found for ID: ${mcpSession}`);
                 res.status(400).json({
                     jsonrpc: '2.0',
                     error: {
@@ -149,13 +227,26 @@ export class MCPRouter extends BaseMCPRouter {
                 });
                 return;
             }
+            
             //STEP 2 -- Close the transport session
-            let currentTransport: StreamableHTTPServerTransport = this.transports[mcpSession];
-            currentTransport.close();
-            //STEP 3 -- Respond with success message
-            res.status(200).json({
-                message: `Session ${mcpSession} closed successfully`
-            });
+            let operationStatus = await this.mcpSessionServiceInstance.closeSession(mcpSession);
+            if (!operationStatus) {
+                infoLogger(`⚠️ Failed to close session with ID: ${mcpSession}`);
+                 res.status(404).json({
+                    jsonrpc: '2.0',
+                    error: {
+                        code: -32000,
+                        message: 'Session not found',
+                    },
+                    id: null,
+                });   
+            }
+            else {
+                infoLogger(`ℹ️ Session with ID: ${mcpSession} closed successfully`);
+                res.status(200).json({
+                    message: `Session ${mcpSession} closed successfully`
+                });
+            } 
             return next();
         });
 

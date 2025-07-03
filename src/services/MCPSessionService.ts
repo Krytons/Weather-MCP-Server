@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import Debug from "debug";
 import { MCPSession, MCPSessionInterface } from '../models/MCPSession';
 import { ca, tr } from "zod/v4/locales";
+import { MCPClientInfo, MCPSessionInfo } from "../types/MCP";
 const infoLogger = Debug("MCPSessionService:log");
 const errorLogger = Debug("MCPSessionService:error");
 
@@ -25,7 +26,7 @@ export class MCPSessionService {
     }
 
     /**
-     * Function to create or reactivate a session.
+     * Function to create a session.
      * This function checks if a session with the given sessionId already exists.
      * If it does, it updates the session's status and last activity time.
      * If it doesn't, it creates a new session with the provided sessionId.
@@ -35,7 +36,7 @@ export class MCPSessionService {
      * @param clientInfo 
      * @returns 
      */
-    public async createSession(sessionId: string, transport: StreamableHTTPServerTransport, userId?: string, clientInfo?: { userAgent?: string; ipAddress?: string }): Promise<MCPSessionInterface> {
+    public async createSession(sessionId: string, transport: StreamableHTTPServerTransport, userId?: string, clientInfo?: MCPClientInfo): Promise<MCPSessionInterface> {
         try{
             //STEP 1 -- Look for existing session
             const existingSession = await MCPSession.findOne({ sessionId });
@@ -50,28 +51,23 @@ export class MCPSessionService {
                 switch(existingSession.status) {
                     case 'active':
                         existingSession.clientInfo = clientInfo || existingSession.clientInfo;
-                        infoLogger(`ℹ️ Session ${sessionId} is already active`);
-                        break;
+                        existingSession.lastActivity = new Date();
+                        existingSession.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+                        //STEP 1.3 -- Save updated session
+                        infoLogger(`ℹ️ Updating session with ID: ${sessionId}`);
+                        this.transports[sessionId] = transport;
+                        await existingSession.save();
+                        infoLogger(`✅ Session with ID: ${sessionId} saved successfully`);
+                        return existingSession;  
                     case 'closed':
                     case 'expired':
-                        infoLogger(`ℹ️ Updating ${existingSession.status} session with ID: ${sessionId}`);
-                        existingSession.status = 'active';
-                        existingSession.clientInfo = clientInfo || existingSession.clientInfo;
-                        existingSession.userId = userId || existingSession.userId;
+                        infoLogger(`ℹ️ Session session with ID ${sessionId} is ${existingSession.status}. Generating new session...`);
                         break;
                     default:
                         errorLogger(`❌ Unknown session status for session ${sessionId}: ${existingSession.status}`);
                         throw new Error('Unknown session status');
                 }
-                existingSession.lastActivity = new Date();
-                existingSession.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-                //STEP 1.3 -- Save updated session
-                infoLogger(`ℹ️ Saving session with ID: ${sessionId}`);
-                this.transports[sessionId] = transport;
-                await existingSession.save();
-                infoLogger(`✅ Session with ID: ${sessionId} saved successfully`);
-                return existingSession;
             }   
 
             //STEP 2 -- Create new session
@@ -90,10 +86,11 @@ export class MCPSessionService {
             return newSession;
         }
         catch (error) {
-            if(this.transports[sessionId])
+            if(this.transports[sessionId]){
+                this.transports[sessionId].close();
                 delete this.transports[sessionId];
-
-            errorLogger(`❌ Error creating/reactivating session ${sessionId}:`, error);
+            }
+            errorLogger(`❌ Error creating new session ${sessionId}:`, error);
             throw error;
         }       
     }
@@ -132,6 +129,7 @@ export class MCPSessionService {
             infoLogger(`✅ Session with ID: ${sessionId} closed successfully`);
 
             //STEP 4 -- Remove transport from active transports 
+            this.transports[sessionId].close();
             delete this.transports[sessionId];
             infoLogger(`ℹ️ Transport for session ${sessionId} removed from active transports`);
             return true;  
@@ -152,7 +150,7 @@ export class MCPSessionService {
      * @param userId 
      * @returns 
      */
-    public async getActiveSession(sessionId: string, userId?: string): Promise<{ session: MCPSessionInterface | null, transport: StreamableHTTPServerTransport | null }> {
+    public async getActiveSession(sessionId: string, userId?: string): Promise<MCPSessionInfo> {
         try {
             //STEP 1 -- Look for active session
             infoLogger(`ℹ️ Fetching active sessions`);
@@ -225,6 +223,7 @@ export class MCPSessionService {
                     const transport = this.transports[sessionId];
                     if (transport && transport.sessionId) {
                         infoLogger(`ℹ️ Removing transport for expired session ${sessionId}`);
+                        this.transports[sessionId].close();
                         delete this.transports[sessionId];
                     }
                 }
