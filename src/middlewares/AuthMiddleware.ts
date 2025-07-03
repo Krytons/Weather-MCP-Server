@@ -14,7 +14,7 @@ export class AuthMiddleware {
     private authService : AuthService;
 
     private constructor(){
-        this.authService = new AuthService();
+        this.authService = AuthService.getInstance();
 
         // Bind the authenticate method to the instance
         this.authenticate = this.authenticate.bind(this);
