@@ -10,6 +10,9 @@ A Proof of Concept Model Context Protocol (MCP) server that provides real-time w
 - **API Versioning**: Built-in support for API versioning with Express
 - **Type Safety**: Full TypeScript implementation with comprehensive type definitions
 - **Software Pattern Oriented**: Following software engineering best practices and patterns
+- **MongoDB Integration**: Persistent storage for users and sessions
+- **Seeder Utility**: Easily seed users and data from environment or file
+- **Persistent MCP Sessions**: Sessions stored in MongoDB with scheduled cleanup
 
 ## 🏗️ Architecture
 
@@ -25,6 +28,83 @@ This project follows a modular, extensible architecture that makes it easy to ad
 - **Add New Tools**: Create new schema files and corresponding service classes
 - **API Versioning**: Easily introduce new API versions without breaking existing clients
 - **Transport Agnostic**: Same core logic works for both MCP and HTTP transports
+
+## 🗄️ Database Integration (MongoDB)
+
+This project supports persistent data storage using MongoDB.
+
+- **MongoDB Connection**:  
+  The server connects to a MongoDB instance using the following environment variables:
+  - `MONGODB_URI`: MongoDB connection string (e.g. `mongodb://localhost:27017`)
+  - `MONGODB_DBNAME`: Name of the database to use (e.g. `mcp-server-skylabs`)
+
+## 🌱 Seeder and Environment Configuration
+
+**User/Data Seeder**:  
+  The project includes a seeder utility to populate the database with initial user data.  
+  Seeder behavior is controlled via these environment variables:
+  - `USERS_SEED_EMAILS`: Comma-separated list of user emails to seed
+  - `SEED_DROP_EXISTING`: If `true`, drop existing data before seeding
+  - `SEED_SKIP_EXISTING`: If `true`, skip users that already exist
+  - `SEED_FROM_FILE`: If `true`, seed users from a file
+  - `SEED_FROM_ENV`: If `true`, seed users from environment variables
+
+  Example usage in `.env`:
+  ```env
+  USERS_SEED_EMAILS=bartolomeo.caruso@kylabs.it,arturo.marzo@skylabs.it
+  SEED_DROP_EXISTING=false
+  SEED_SKIP_EXISTING=true
+  SEED_FROM_FILE=false
+  SEED_FROM_ENV=true
+  ```
+
+## 🔒 Persistent MCP Sessions & Scheduled Cleanup
+
+- **Session Persistence**:  
+  MCP sessions are stored in MongoDB, allowing for persistent user sessions across server restarts.
+
+- **Session Cleanup**:  
+  Expired sessions are automatically removed at a scheduled interval, configured via:
+  - `MCP_SESSION_CLEANUP_INTERVAL`: Interval (in minutes) for session cleanup (e.g. `120` for every 2 hours)
+
+  Example:
+  ```env
+  MCP_SESSION_CLEANUP_INTERVAL=120
+  ```
+
+## 🔑 API Key Management via Seeder
+
+The seeder utility not only creates initial users but also generates unique API KEYs for each seeded user. These API KEYs must be distributed to MCP clients, as they are required for authenticating and accessing protected MCP endpoints.
+
+## 🛡️ Security: Auth Middleware Protection
+
+Every MCP route is protected by an authentication middleware. All requests to MCP endpoints must include a valid API KEY (as a Bearer token in the Authorization header). Unauthorized or invalid requests are rejected with appropriate error messages.
+
+## 🗃️ MongoDB Model Structure
+
+The project uses Mongoose models to persist users and MCP sessions. Here’s a summary of the main models:
+
+### User Model (`src/models/User.ts`)
+- **Fields:**
+  - `email` (string, unique, required): User email address
+  - `apiKey` (string, unique, required): API key for MCP authentication
+  - `isActive` (boolean, default: true): User status
+  - `createdAt`, `updatedAt` (Date): Timestamps
+- **Indexes:**
+  - Unique on `email` and `apiKey`
+
+### MCP Session Model (`src/models/MCPSession.ts`)
+- **Fields:**
+  - `sessionId` (string, unique, required): Unique session identifier
+  - `userId` (string, optional): Associated user
+  - `status` (enum: 'active', 'closed', 'expired'): Session state
+  - `createdAt`, `lastActivity`, `expiresAt` (Date): Timestamps and TTL
+  - `clientInfo` (object): User agent and IP address
+  - `metadata` (object): Additional session data
+- **Indexes:**
+  - On `userId`, `status`, and TTL on `expiresAt` for automatic cleanup
+
+This structure ensures secure, persistent, and scalable management of users and MCP sessions.
 
 ## 📋 Prerequisites
 
@@ -75,25 +155,58 @@ node dist/index.js
 
 The HTTP server will start on port 3000 by default (or your configured `PORT`).
 
+## 🚦 Start Modes & Debugging
+
+The project provides multiple start modes to control logging verbosity, leveraging the [debug](https://www.npmjs.com/package/debug) dependency. You can choose the mode that best fits your needs:
+
+| Script           | Description                                                      |
+|------------------|------------------------------------------------------------------|
+| `npm start`      | Silent execution (no logs except critical errors)                |
+| `npm run start:errors` | Only error logs (`DEBUG=*:error`)                        |
+| `npm run start:debug`  | Local info and errors (`DEBUG=*:log,*:error`)            |
+| `npm run start:verbose`| Verbose mode, logs all debug info including Express and routers (`DEBUG=*`) |
+
+**Examples:**
+```bash
+npm start                # Silent mode
+npm run start:errors     # Only errors
+npm run start:debug      # Info and errors
+npm run start:verbose    # Full verbose logging
+```
+
+This makes it easy to troubleshoot, monitor, or run the server quietly in production.
+
 ## 📁 Project Structure
+
+The project is organized for clarity, extensibility, and maintainability. Here’s an overview of the main folders and files:
 
 ```
 src/
-├── index.ts              # Main application entry point
-├── server.ts             # Express server setup and configuration
-├── interfaces/           # TypeScript interface definitions
-│   └── ...
-├── routes/              # HTTP API route handlers
-│   └── V1Router.ts      # Version 1 API routes
-├── schemas/             # Data validation and tool schemas
-│   └── WeatherSchemas.ts # Weather tool schema definitions
-├── services/            # Core business logic layer
-│   └── WeatherService.ts # Weather data service implementation
-├── tools/               # MCP tool implementations
-│   └── ...
-└── types/               # TypeScript type definitions
-    └── ...
+├── index.ts                # Main application entry point
+├── server.ts               # Express server setup and configuration
+├── config/                 # Express and MongoDB configuration
+│   ├── ExpressServer.ts    # Express server class
+│   └── MongoDatabase.ts    # MongoDB connection logic
+├── controllers/            # Express route controllers (e.g., UsersController)
+├── interfaces/             # TypeScript interface definitions (Tools, Routers, etc.)
+├── middlewares/            # Express middlewares (auth, validation, etc.)
+├── models/                 # Mongoose models (User, MCPSession, etc.)
+├── routes/                 # HTTP API route handlers and versioning
+│   ├── BaseMCPRouter.ts    # Base router class
+│   ├── RouterFactory.ts    # Router factory for versioning
+│   └── v1/                 # Version 1 API routers
+│       ├── MCPRouter.ts    # MCP tool router
+│       └── UsersRouter.ts  # User management router
+├── schemas/                # Zod schemas for tool and API validation
+│   └── WeatherSchemas.ts   # Weather tool schema definitions
+├── seeders/                # Database seeder scripts (e.g., UsersSeeder)
+├── services/               # Business logic and integrations (WeatherService, AuthService, etc.)
+├── tools/                  # MCP tool implementations (WeatherTools, etc.)
+├── types/                  # TypeScript type definitions (Content, CurrentWeather, etc.)
+└── postman/                # Postman collection for API testing
 ```
+
+This structure supports modular development, easy extension of tools/services, and robust API versioning. Each major feature or concern is separated into its own folder, making the codebase easy to navigate and maintain.
 
 ## 🔧 API Reference
 
@@ -152,28 +265,68 @@ curl -X POST http://localhost:3000/api/v1/weather/current \
 
 ## 🧪 Testing
 
-The project includes comprehensive testing resources:
+You can test the Weather MCP Server in both stdio (MCP) mode and HTTP mode.
 
-- **Postman Collection**: Located in `postman/` directory for API testing
-- **Manual Testing**: Use the provided examples to test both MCP and HTTP modes
+### Testing in Stdio (MCP) Mode
 
-### Testing MCP Mode
+1. **Start the server in stdio mode:**
+   ```bash
+   MODE=stdio npm start
+   ```
+2. **Connect with an MCP-compatible agent or client:**
+   - You can connect to the MCP server using an agent like GitHub Copilot, Open Interpreter, or any other tool that supports the Model Context Protocol (MCP) over stdio.
+   - The agent should be configured to launch the server process and communicate via stdio, sending JSON-RPC requests and receiving responses.
+   - For example, in Copilot Chat, you can add the MCP server as a tool and interact with it using natural language or direct JSON-RPC calls.
+   - Refer to your agent's documentation for details on connecting to MCP servers via stdio.
 
-Use an MCP client or test harness to connect via stdio and call the `getCurrentWeather` tool.
+### Testing in HTTP Mode
 
-### Testing HTTP Mode
+Start the server in HTTP mode:
+```bash
+npm start
+```
 
-Use the Postman collection or curl commands to test HTTP endpoints.
+You have two main options for testing:
+
+#### Option 1: Using Postman Collection
+
+1. **Import the Postman collection** from `postman/MCPServer.postman_collection.json`.
+2. **Authenticate:**
+   - Use the `Auth > Authenticate` request.
+   - Provide a valid seeded user email and API key (generated by the seeder) in the request body.
+   - The returned JWT token (`mcpAuthToken`) is automatically saved in your Postman collection variables by the provided post-script.
+3. **Initialize MCP Session:**
+   - Use the `Initialization > Initialize Request`.
+   - The response will include an `mcp-session-id` header, which is also automatically saved as `mcpSessionId` in your collection variables by the post-script.
+4. **Call Tools:**
+   - Use the `Tools > Tool list` or `Tools > Get city weather` requests.
+   - The required `Authorization` and `mcp-session-id` headers are automatically populated from your collection variables.
+
+#### Option 2: Using the Official MCP Client (HTTP Mode Only)
+
+- Clone and use [Weather-MCP-Client](https://github.com/Krytons/Weather-MCP-Client) for a seamless HTTP experience.
+- The client handles authentication, session management, and tool invocation automatically.
+- Follow the instructions in the client’s README to connect and interact with your server.
+
+This dual approach allows you to test both the protocol and the HTTP API endpoints, ensuring your server works as expected in all supported modes.
 
 ## ⚙️ Configuration
 
 ### Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `API_KEY` | OpenWeatherMap API key | - | ✅ |
-| `MODE` | Server mode (`stdio` for MCP, `http` for HTTP server) | `http` | ❌ |
-| `PORT` | HTTP server port | `3000` | ❌ |
+| Variable                    | Description                                      | Example/Default                        |
+|-----------------------------|--------------------------------------------------|----------------------------------------|
+| `API_KEY`                   | OpenWeatherMap API key                           | (required)                             |
+| `MONGODB_URI`               | MongoDB connection string                        | mongodb://localhost:27017              |
+| `MONGODB_DBNAME`            | MongoDB database name                            | mcp-server-skylabs                     |
+| `USERS_SEED_EMAILS`         | Comma-separated emails for seeding users         | user1@example.com,user2@example.com     |
+| `SEED_DROP_EXISTING`        | Drop existing data before seeding (true/false)   | false                                  |
+| `SEED_SKIP_EXISTING`        | Skip users that already exist (true/false)       | true                                   |
+| `SEED_FROM_FILE`            | Seed users from file (true/false)                | false                                  |
+| `SEED_FROM_ENV`             | Seed users from env variables (true/false)       | true                                   |
+| `MCP_SESSION_CLEANUP_INTERVAL` | Session cleanup interval in minutes           | 120                                    |
+| `PORT`                      | HTTP server port                                 | 3000                                   |
+| `MODE`                      | Server mode (`stdio` for MCP, `http` for HTTP)   | http                                   |
 
 ### Advanced Configuration
 
