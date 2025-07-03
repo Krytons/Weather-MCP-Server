@@ -25,7 +25,7 @@ export class MCPSessionService {
         return MCPSessionService.instance;
     }
 
-    
+
     /**
      * Function to create a session.
      * This function checks if a session with the given sessionId already exists.
@@ -257,6 +257,7 @@ export class MCPSessionService {
                 errorLogger(`❌ Error during cleanup scheduler:`, error);
             }
         }, intervalMinutes * 1000); // Convert minutes to milliseconds  
-        infoLogger(`✅ Cleanup scheduler set successfully`);
+
+        infoLogger(`🕐 Cleanup scheduler started: every ${intervalMinutes} minutes`);
     }
 }
