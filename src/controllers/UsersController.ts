@@ -5,7 +5,7 @@ export class UsersController {
     private authService : AuthService;
 
     constructor() {
-       this.authService = new AuthService();
+       this.authService = AuthService.getInstance();
     }      
     
     public async authenticate(req: Request, res: Response, next: NextFunction) : Promise<void> {

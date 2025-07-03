@@ -9,12 +9,24 @@ const errorLogger = Debug("AuthService:error");
 
 
 export class AuthService{
+    private static instance: AuthService;
+
     private readonly jwtSecret: string;
     private readonly jwtExpiresIn: number;
 
-    constructor(){
-        this.jwtSecret = process.env.JWT_SECRET || 'sample_secret_key'
-        this.jwtExpiresIn = process.env.JWT_EXPIRES_IN ? Number(process.env.JWT_EXPIRES_IN) : 3600
+    private constructor(){
+        this.jwtSecret = process.env.JWT_SECRET || 'sample_secret_key';
+        this.jwtExpiresIn = process.env.JWT_EXPIRES_IN ? Number(process.env.JWT_EXPIRES_IN) : 3600;
+
+        this.authenticate = this.authenticate.bind(this);
+        this.verifyToken = this.verifyToken.bind(this);
+    }
+
+    public static getInstance(): AuthService {
+        if (!AuthService.instance) 
+            AuthService.instance = new AuthService();
+        
+        return AuthService.instance;
     }
 
     
