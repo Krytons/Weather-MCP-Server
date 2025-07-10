@@ -332,7 +332,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\" : \"{{mcpUserEmail}}\",\r\n    \"apiKey\" : \"{{mcpAPIKey}}\"\r\n}",
+							"raw": "{\r\n    \"email\" : \"{{mcpTentantEmail}}\",\r\n    \"apiKey\" : \"{{mcpAPIKey}}\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -340,14 +340,14 @@
 							}
 						},
 						"url": {
-							"raw": "localhost:3000/v1/users/auth",
+							"raw": "localhost:3000/v1/tenants/auth",
 							"host": [
 								"localhost"
 							],
 							"port": "3000",
 							"path": [
 								"v1",
-								"users",
+								"tenants",
 								"auth"
 							]
 						}
@@ -404,7 +404,7 @@
 			"type": "string"
 		},
 		{
-			"key": "mcpUserEmail",
+			"key": "mcpTentantEmail",
 			"value": "",
 			"type": "string"
 		},
