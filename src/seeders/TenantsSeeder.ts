@@ -130,7 +130,7 @@ export class TenantsSeeder implements SeederInterface {
         }
         else if (this.options.seedFromEnv){
             infoLogger('🌳 Seeding tenants from env:');
-            const emailsString = process.env.USERS_SEED_EMAILS || '';
+            const emailsString = process.env.TENANTS_SEED_EMAILS || '';
             this.tenantsEmails = emailsString.split(',').map(email => email.trim()).filter(email => email);
         }
         else {
