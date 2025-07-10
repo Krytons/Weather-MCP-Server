@@ -3,7 +3,7 @@ import { Schema, model, Document } from 'mongoose';
 
 export interface MCPSessionInterface extends Document {
   sessionId: string;
-  userId?: string; 
+  tenantId?: string; 
   status: 'active' | 'closed' | 'expired';
   createdAt: Date;
   lastActivity: Date;
@@ -27,7 +27,7 @@ const MCPSessionSchema = new Schema<MCPSessionInterface>({
     unique: true,
     index: true
   },
-  userId: {
+  tenantId: {
     type: String,
     required: false,
     index: true
@@ -64,7 +64,7 @@ const MCPSessionSchema = new Schema<MCPSessionInterface>({
 });
 
 
-MCPSessionSchema.index({ userId: 1, status: 1 });
+MCPSessionSchema.index({ tenantId: 1, status: 1 });
 MCPSessionSchema.index({ status: 1, expiresAt: 1 });
 
 export const MCPSession = model<MCPSessionInterface>('MCPSession', MCPSessionSchema);

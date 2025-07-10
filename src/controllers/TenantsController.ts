@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 
-export class UsersController {
+export class TenantsController {
     private authService : AuthService;
 
     constructor() {
@@ -12,7 +12,7 @@ export class UsersController {
         //STEP 1 -- Extract email and API key from request body
         const { email, apiKey } = req.body;
 
-        //STEP 2 -- Get a JWT token for the user
+        //STEP 2 -- Get a JWT token for the tenant
         try {
             const authResponse = await this.authService.authenticate(email, apiKey);
             if (!authResponse.success) {
@@ -28,7 +28,7 @@ export class UsersController {
             next();
         } 
         catch (error) {
-            console.error('[USER-CONTROLLER] ❌ Authenticate error: ', error);
+            console.error('[TENTANT-CONTROLLER] ❌ Authenticate error: ', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal authentication error'

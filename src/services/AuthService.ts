@@ -1,6 +1,6 @@
-import {createHash, randomBytes, timingSafeEqual} from 'crypto';
+import {createHash, timingSafeEqual} from 'crypto';
 import { AuthResponse, AuthTokenPayload } from '../interfaces/Auth';
-import { User } from '../models/User';
+import { Tenant } from '../models/Tentant';
 import jwt from 'jsonwebtoken';
 
 import Debug from "debug";
@@ -71,36 +71,36 @@ export class AuthService{
     public async authenticate(email : string, apiKey : string): Promise<AuthResponse>{
         try{
             //STEP 1 -- Check required parameters
-            infoLogger(`ℹ️ Authenticating user with email: ${email}`);
+            infoLogger(`ℹ️ Authenticating tenant with email: ${email}`);
             if(!email || !apiKey)
                 return {
                     success: false,
                     message: 'Missing email or apiKey',
                 }
 
-            //STEP 2 -- Look for a user in database
-            let authUser = await User.findOne({
+            //STEP 2 -- Look for a tenant in database
+            let authTenant = await Tenant.findOne({
                 email: email.toLocaleLowerCase(),
                 isActive: true
             })
-            if(!authUser)
+            if(!authTenant)
                 return {
                     success: false,
-                    message: 'Invalid credentials or user not found',
+                    message: 'Invalid credentials or tenant not found',
                 }
 
             //STEP 3 -- Verify API Key
             let hashedKey = this.hashKey(apiKey);
-            if(!this.compareHash(hashedKey, authUser.apiKey))
+            if(!this.compareHash(hashedKey, authTenant.apiKey))
                 return {
                     success: false,
-                    message: 'Invalid credentials or user not found',
+                    message: 'Invalid credentials or tenant not found',
                 }
 
             //STEP 4 -- Generate JWT 
             let jwtPayload : AuthTokenPayload = {
-                userID: authUser._id.toString(),
-                email: authUser.email
+                tenantId: authTenant._id.toString(),
+                email: authTenant.email
             }
             let token = jwt.sign(jwtPayload, this.jwtSecret, {
                 expiresIn: this.jwtExpiresIn

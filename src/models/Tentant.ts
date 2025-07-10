@@ -1,6 +1,6 @@
 import mongoose, {Document, Schema, Types} from 'mongoose';
 
-export interface UserInterface extends Document {
+export interface TenantInterface extends Document {
     _id : Types.ObjectId;
     email: string;
     apiKey: string;
@@ -9,7 +9,7 @@ export interface UserInterface extends Document {
     updatedAt: Date;
 }
 
-const UserSchema : Schema = new Schema({
+const TenantSchema : Schema = new Schema({
     email : {
         type: String,
         required: true,
@@ -30,9 +30,9 @@ const UserSchema : Schema = new Schema({
     timestamps: true
 });
 
-UserSchema.index({
+TenantSchema.index({
     email: 1,
     apiKey: 1
 })
 
-export const User = mongoose.model<UserInterface>('User', UserSchema);
+export const Tenant = mongoose.model<TenantInterface>('Tenant', TenantSchema);
