@@ -110,9 +110,9 @@ export class AuthMiddleware {
             }
 
             //STEP 4 -- Enhance response locals by adding user data
-            infoLogger(`✅ Auth was successful for user: ${payload.userID} (${payload.email})`);
+            infoLogger(`✅ Auth was successful for user: ${payload.tenantId} (${payload.email})`);
             res.locals.user = {
-                userID: payload.userID,
+                tenantId: payload.tenantId,
                 userEmail: payload.email
             }
             return next();

@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { randomUUID } from "crypto";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { APIRouterInterface } from "../../interfaces/Routers";
-import { UsersRouter } from "./UsersRouter";
+import { TenantsRouter } from "./TenantsRouter";
 import { AuthMiddleware } from "../../middlewares/AuthMiddleware";
 import { ValidationMiddleware } from '../../middlewares/ValidationMiddleware';
 import { check } from "express-validator";
@@ -25,7 +25,7 @@ export class MCPRouter extends BaseMCPRouter {
         super(router, version, server);
 
         this.apiRouters = [];
-        this.apiRouters.push(new UsersRouter())
+        this.apiRouters.push(new TenantsRouter())
         this.authMiddlewareInstance = AuthMiddleware.getInstance();
         this.mcpSessionServiceInstance = MCPSessionService.getInstance();
 
