@@ -33,19 +33,19 @@ export class MCPSessionService {
      * If it doesn't, it creates a new session with the provided sessionId.
      * @param sessionId 
      * @param transport 
-     * @param userId 
+     * @param tenantId 
      * @param clientInfo 
      * @returns 
      */
-    public async createSession(sessionId: string, transport: StreamableHTTPServerTransport, userId?: string, clientInfo?: MCPClientInfo): Promise<MCPSessionInterface> {
+    public async createSession(sessionId: string, transport: StreamableHTTPServerTransport, tenantId?: string, clientInfo?: MCPClientInfo): Promise<MCPSessionInterface> {
         try{
             //STEP 1 -- Look for existing session
             const existingSession = await MCPSession.findOne({ sessionId });
             if(existingSession) {
-                //STEP 1.1 -- Check if session belongs to the same user
-                if (userId && existingSession.userId && existingSession.userId !== userId) {
-                    errorLogger(`❌ Session ${sessionId} belongs to different user`);
-                    throw new Error('Session belongs to different user');
+                //STEP 1.1 -- Check if session belongs to the same tenant
+                if (tenantId && existingSession.tenantId && existingSession.tenantId !== tenantId) {
+                    errorLogger(`❌ Session ${sessionId} belongs to different tenant`);
+                    throw new Error('Session belongs to different tenant');
                 }
 
                 //STEP 1.2 -- Handle existing session by looking its status
@@ -76,7 +76,7 @@ export class MCPSessionService {
             this.transports[sessionId] = transport;
             const newSession = new MCPSession({
                 sessionId,
-                userId: userId,
+                tenantId: tenantId,
                 status: 'active',
                 clientInfo: clientInfo,
                 lastActivity: new Date(),
@@ -101,12 +101,12 @@ export class MCPSessionService {
      * Function to close a session.
      * This function checks if a session with the given sessionId exists.
      * If it does, it updates the session's status to 'closed', updates the last activity time, and removes the transport from the active transports.
-     * If the session does not exist or belongs to a different user, it returns false.  
+     * If the session does not exist or belongs to a different tenant, it returns false.  
      * @param sessionId 
-     * @param userId 
+     * @param tenantId 
      * @returns 
      */
-    public async closeSession(sessionId: string, userId?: string): Promise<boolean>{
+    public async closeSession(sessionId: string, tenantId?: string): Promise<boolean>{
         try {
             //STEP 1 -- Check if session exists
             infoLogger(`ℹ️ Closing session with ID: ${sessionId}`);
@@ -116,9 +116,9 @@ export class MCPSessionService {
                 return false;
             }
 
-            //STEP 2 -- Check if session belongs to the same user
-            if (userId && session.userId && session.userId !== userId) {
-                errorLogger(`❌ Session ${sessionId} belongs to different user`);
+            //STEP 2 -- Check if session belongs to the same tenant
+            if (tenantId && session.tenantId && session.tenantId !== tenantId) {
+                errorLogger(`❌ Session ${sessionId} belongs to different tenant`);
                 return false;
             }
 
@@ -146,12 +146,12 @@ export class MCPSessionService {
      * Function to get an active session by sessionId.
      * This function checks if a session with the given sessionId exists and is active.
      * If it does, it returns the session and its associated transport.
-     * If the session does not exist, is not active, or belongs to a different user, it returns null.
+     * If the session does not exist, is not active, or belongs to a different tenant, it returns null.
      * @param sessionId 
-     * @param userId 
+     * @param tenantId 
      * @returns 
      */
-    public async getActiveSession(sessionId: string, userId?: string): Promise<MCPSessionInfo> {
+    public async getActiveSession(sessionId: string, tenantId?: string): Promise<MCPSessionInfo> {
         try {
             //STEP 1 -- Look for active session
             infoLogger(`ℹ️ Fetching active sessions`);
@@ -161,9 +161,9 @@ export class MCPSessionService {
                 return { session: null, transport: null };
             }
 
-            //STEP 2 -- Look if returned session is for the same user
-            if (userId && session.userId && session.userId !== userId) {
-                errorLogger(`❌ Session ${sessionId} access denied: belongs to different user`);
+            //STEP 2 -- Look if returned session is for the same tenant
+            if (tenantId && session.tenantId && session.tenantId !== tenantId) {
+                errorLogger(`❌ Session ${sessionId} access denied: belongs to different tenant`);
                 return { session: null, transport: null };
             }
             

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { DatabaseInterface } from "../interfaces/Database";
 import { SeederOptions } from "../types/Seeders";
-import { UsersSeeder } from "../seeders/UsersSeeder";
+import { TenantsSeeder } from "../seeders/TenantsSeeder";
 
 import Debug from "debug";
 const infoLogger = Debug("MongoDatabase:log");
@@ -82,7 +82,7 @@ export class MongoDatabase implements DatabaseInterface {
         }
 
         //STEP 2 -- Execute seeding logic (to be implemented in seeders)
-        let userSeeder = new UsersSeeder(options);
+        let userSeeder = new TenantsSeeder(options);
         await userSeeder.seed();
         
         // Return true to indicate successful seeding

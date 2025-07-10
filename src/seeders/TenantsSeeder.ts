@@ -1,39 +1,39 @@
 import { SeederInterface } from "../interfaces/Seeders";
-import { User, UserInterface } from "../models/User";
+import { Tenant, TenantInterface } from "../models/Tentant";
 import { SeederOptions } from "../types/Seeders";
 import { readFileSync } from 'fs';
 import {randomBytes, createHash} from 'crypto';
 
 import Debug from "debug";
-const infoLogger = Debug("UserSeeder:log");
-const errorLogger = Debug("UserSeeder:error");
+const infoLogger = Debug("TenantSeeder:log");
+const errorLogger = Debug("TenantSeeder:error");
 
-export class UsersSeeder implements SeederInterface {
+export class TenantsSeeder implements SeederInterface {
     public options : SeederOptions;
 
     private seedFilePath: string;
-    private usersEmails: string[];
-    private createdUsers: UserInterface[] = [];
-    private skippedUsers: string[] = [];
-    private errorUsers: string[] = [];
+    private tenantsEmails: string[];
+    private createdTenants: TenantInterface[] = [];
+    private skippedTenants: string[] = [];
+    private errorTenants: string[] = [];
     
     constructor(options : SeederOptions) {
         this.options = options;
         this.seedFilePath = './emails.json';
-        this.usersEmails = [];
+        this.tenantsEmails = [];
     }
 
 
     /**
-     * This method seeds the database with user data.
+     * This method seeds the database with tenant data.
      * @returns {Promise<boolean>} - Returns true if the seeding process was successful, false otherwise.
      */
     async seed(): Promise<boolean> {
-        infoLogger('🌱 Starting user seeding process...');
+        infoLogger('🌱 Starting tenant seeding process...');
 
-        //STEP 1 -- Check if we need to drop existing users       
+        //STEP 1 -- Check if we need to drop existing tenants       
         if (this.options.dropExisting)
-            await this.dropExistingUsers();
+            await this.dropExistingTenants();
 
         //STEP 2 -- Get processing emails
         if(!this.setProcessingEmails()) {
@@ -42,20 +42,20 @@ export class UsersSeeder implements SeederInterface {
         }
 
         //STEP 3 -- Process each email
-        for (const email of this.usersEmails) { 
+        for (const email of this.tenantsEmails) { 
             try {
                 //STEP 3.1 -- Validate email format
                 if (!email || !email.includes('@')) {
                     errorLogger(`❌ Invalid email format: ${email}`);
-                    this.errorUsers.push(email);
+                    this.errorTenants.push(email);
                     continue;
                 }   
 
                 //STEP 3.2 -- Check if email already exists in the database
-                const existingUser = await User.findOne({ email: email.toLowerCase() });
-                if (existingUser) {
-                    infoLogger(`🛑 User with email ${email} already exists. Skipping...`);
-                    this.skippedUsers.push(email);
+                const existingTenant = await Tenant.findOne({ email: email.toLowerCase() });
+                if (existingTenant) {
+                    infoLogger(`🛑 Tenant with email ${email} already exists. Skipping...`);
+                    this.skippedTenants.push(email);
                     continue;
                 }
 
@@ -63,56 +63,56 @@ export class UsersSeeder implements SeederInterface {
                 let plainApiKey = this.generatePlainApiKey();
                 let hashedApiKey = this.generateHashedApiKey(plainApiKey);
 
-                //STEP 3.4 -- Create new user
-                infoLogger(`📧 Creating user with email: ${email}`);
-                const newUser = new User({
+                //STEP 3.4 -- Create new tenant
+                infoLogger(`📧 Creating tenant with email: ${email}`);
+                const newTenant = new Tenant({
                     email: email.toLowerCase(),
                     apiKey: hashedApiKey, 
                     isActive: true,
                     createdAt: new Date(),
                     updatedAt: new Date()
                 });
-                await newUser.save();
+                await newTenant.save();
 
-                this.createdUsers.push(newUser);
-                infoLogger(`✅ Created user with email: ${email} | API key assigned: ${plainApiKey}`);
+                this.createdTenants.push(newTenant);
+                infoLogger(`✅ Created tenant with email: ${email} | API key assigned: ${plainApiKey}`);
             } 
             catch (error) {
-                errorLogger(`❌ Error creating user with email ${email}:`, error);
-                this.errorUsers.push(email);
+                errorLogger(`❌ Error creating tenant with email ${email}:`, error);
+                this.errorTenants.push(email);
             }
         }
 
         //STEP 4 -- Log the results
-        infoLogger('🌱 User seeding process completed');
+        infoLogger('🌱 Tenant seeding process completed');
         infoLogger('📊 Seeding Summary:');
-        infoLogger(`✅ Created: ${this.createdUsers.length} users`);
-        infoLogger(`⏭️ Skipped: ${this.skippedUsers.length} users`);
-        infoLogger(`❌ Errors: ${this.errorUsers.length} users`);
+        infoLogger(`✅ Created: ${this.createdTenants.length} tenants`);
+        infoLogger(`⏭️ Skipped: ${this.skippedTenants.length} tenants`);
+        infoLogger(`❌ Errors: ${this.errorTenants.length} tenants`);
         return true;
     }
 
 
     /**
-     * This method drops all existing users from the database.
+     * This method drops all existing tenants from the database.
      * It logs the process and handles any errors that may occur during the deletion.
-     * @returns {Promise<void>} - A promise that resolves when the users are dropped.
+     * @returns {Promise<void>} - A promise that resolves when the tenants are dropped.
      */
-    private async dropExistingUsers(): Promise<void> {
+    private async dropExistingTenants(): Promise<void> {
         try {
-            infoLogger('🗑️ Dropping existing users...');
-            await User.deleteMany({});
-            infoLogger('✅ Existing users dropped');
+            infoLogger('🗑️ Dropping existing tenants...');
+            await Tenant.deleteMany({});
+            infoLogger('✅ Existing tenants dropped');
         } 
         catch (error) {
-            errorLogger('❌ Error dropping existing users:', error);
+            errorLogger('❌ Error dropping existing tenants:', error);
             throw error;
         }
     }
 
 
     /**
-     * This method sets the emails to be processed for user seeding.
+     * This method sets the emails to be processed for tenant seeding.
      * It checks if the emails should be seeded from a file, environment variable, or default configuration.
      * @returns {boolean} - Returns true if emails are successfully set, false otherwise.
      */
@@ -120,8 +120,8 @@ export class UsersSeeder implements SeederInterface {
         //STEP 1 -- Check if we need to seed from file or env. Use default emails if none of previous options are set
         if (this.options.seedFromFile){
             try {
-                infoLogger('📂 Seeding users from file:', this.seedFilePath);
-                this.usersEmails = JSON.parse(readFileSync('./emails.json', 'utf8'));
+                infoLogger('📂 Seeding tenants from file:', this.seedFilePath);
+                this.tenantsEmails = JSON.parse(readFileSync('./emails.json', 'utf8'));
             } 
             catch (error) {
                 errorLogger('❌ Error reading seed file:', error);
@@ -129,13 +129,13 @@ export class UsersSeeder implements SeederInterface {
             }
         }
         else if (this.options.seedFromEnv){
-            infoLogger('🌳 Seeding users from env:');
-            const emailsString = process.env.USERS_SEED_EMAILS || '';
-            this.usersEmails = emailsString.split(',').map(email => email.trim()).filter(email => email);
+            infoLogger('🌳 Seeding tenants from env:');
+            const emailsString = process.env.TENANTS_SEED_EMAILS || '';
+            this.tenantsEmails = emailsString.split(',').map(email => email.trim()).filter(email => email);
         }
         else {
-            infoLogger('🧾 Seeding users from default configuration:');
-            this.usersEmails = [
+            infoLogger('🧾 Seeding tenants from default configuration:');
+            this.tenantsEmails = [
                 'bartolomeo.caruso@skylabs.it',
                 'arturo.marzo@skylabs.it',
                 'daniele.dagosta@skylabs.it'
@@ -143,7 +143,7 @@ export class UsersSeeder implements SeederInterface {
         }
 
         //STEP 2 -- Check if any emails were found
-        if (!this.usersEmails || this.usersEmails.length === 0) {
+        if (!this.tenantsEmails || this.tenantsEmails.length === 0) {
             infoLogger('❌ No emails found in SEED_EMAILS environment variable');
             return false;
         }
